@@ -8,13 +8,13 @@ library(ggplot2) #plots
 library(merTools)
 library(afex) #CIs
 
-Fatty_acids <- read_excel("C:/Users/Hannah/Desktop/Forage paper/Agronomy/Fatty_acid_data.xlsx") %>% 
+Fatty_acids <- read_excel("C:/Users/Hannah/Desktop/Forage paper/Fatty acids/Fatty_acid_data.xlsx") %>% 
   mutate_at(vars(Forage, Paddock, Pen), as.factor)
 
   Fatty_acids[,6:16] = Fatty_acids[,6:16]*100
 ```
 
-# Create dataset to use for predictions & function
+# Create dataset to use for bootstrap predictions & function
 ```{r, include = F}
 #create data to make predictions from
 newDat = data.frame(Day = rep(0:46, 2), 
@@ -34,7 +34,7 @@ predict.fun <- function(my.lmm) {
 #model
 C140 = lmer(C140 ~ Day*Forage + (1|Pen) + (1|Paddock/Forage), 
             data = within(Fatty_acids, 
-                          Forage <- relevel(Forage, ref = "Rye")))
+                          Forage <- relevel(Forage, ref = "Wheat")))
 
 #diagnostics
 plot(C140, main = "Residuals vs fitted")
@@ -43,7 +43,7 @@ qqline(resid(C140))
 
 #regression coefficients 
 summary(C140, ddf = "Kenward-Roger")
-round(confint(C140), 4)
+round(confint(C140), 3)
 anova(C140, ddf = "Kenward-Roger")
 
 #random effects
@@ -92,7 +92,7 @@ newDat.C140 <- cbind(newDat.C140, confint(boot.ci.C140, type = "perc"))
   theme_classic() +
     
   labs(x = "Day of grazing period", 
-       y = "Myristic acid, g 100g\u207B\u00B9", 
+       y = "Myristic acid, g 100g\u207B\u00B9 of total fatty acids", 
        caption = "Scatter plot of original data with regression and bootstrap 95% confidence intervals (1000 resamples) of myristic acid (C14:0) \nconcentration for winter rye and winter wheat forages during the grazing period.") +  
   
   #labs(x = "Day of grazing period", 
@@ -131,7 +131,7 @@ qqline(resid(C160))
 
 #regression coefficients 
 summary(C160, ddf = "Kenward-Roger")
-round(confint(C160), 4)
+round(confint(C160), 3)
 anova(C160, ddf = "Kenward-Roger")
 
 #R squared
@@ -207,7 +207,7 @@ quantile(data.frame(data.frame(boot.ci.C160)$X94 - data.frame(boot.ci.C160)$X47)
   theme_classic() +
   
   labs(x = "Day of grazing period", 
-       y = "Palmitic acid, g 100g\u207B\u00B9") +
+       y = "Palmitic acid, g 100g\u207B\u00B9 of total fatty acids") +
   
   scale_y_continuous(breaks = seq(10, 24, 2), 
                      limits = c(10, 25), expand = c(0,0)) +
@@ -231,7 +231,7 @@ quantile(data.frame(data.frame(boot.ci.C160)$X94 - data.frame(boot.ci.C160)$X47)
 ```{r, include = F}
 #model
 C180 = lmer(C180 ~ Day*Forage + (1|Pen) + (1|Paddock/Forage), 
-            data = within(Fatty_acids, Forage <- relevel(Forage, ref = "Rye")))
+            data = within(Fatty_acids, Forage <- relevel(Forage, ref = "Wheat")))
 
 #diagnostics
 plot(C180, main = "Residuals vs fitted")
@@ -240,7 +240,7 @@ qqline(resid(C180))
 
 #regression coefficients
 summary(C180, ddf = "Kenward-Roger")
-round(confint(C180), 4)
+round(confint(C180), 3)
 anova(C180, ddf = "Kenward-Roger")
 
 #R squared
@@ -287,7 +287,7 @@ newDat.C180 <- cbind(newDat.C180, confint(boot.ci.C180, type = "perc"))
   theme_classic() +
   
   labs(x = "Day of grazing period", 
-       y = "Stearic acid, g 100g\u207B\u00B9", 
+       y = "Stearic acid, g 100g\u207B\u00B9 of total fatty acids", 
        caption = "Scatter plot of original data with regression and bootstrap 95% confidence intervals (1000 resamples) of stearic acid (C18:0) \nconcentration for winter rye and winter wheat forages during the grazing period.") +
     
   scale_y_continuous(breaks = seq(0, 3.5, .5), 
@@ -312,7 +312,7 @@ newDat.C180 <- cbind(newDat.C180, confint(boot.ci.C180, type = "perc"))
 ```{r, include = F}
 #model
 C181.2 = lmer(C181 ~ poly(Day, 2)*Forage + (1|Pen) + (1|Paddock/Forage), 
-              data = within(Fatty_acids, Forage <- relevel(Forage, ref = "Rye")))
+              data = within(Fatty_acids, Forage <- relevel(Forage, ref = "Wheat")))
 
 #diagnostics
 plot(C181.2, main = "Residuals vs fitted")
@@ -321,7 +321,7 @@ qqline(resid(C181.2))
 
 #regression coefficients
 summary(C181.2, ddf = "Kenward-Roger")
-round(confint(C181.2), 4)
+round(confint(C181.2), 3)
 anova(C181.2, ddf = "Kenward-Roger")
 
 #R squared
@@ -369,7 +369,7 @@ newDat.C181 <- cbind(newDat.C181, confint(boot.ci.C181, type = "perc"))
   theme_classic() +
     
   labs(x = "Day of grazing period", 
-       y = "Oleic acid, g 100g\u207B\u00B9", 
+       y = "Oleic acid, g 100g\u207B\u00B9 of total fatty acids", 
        caption = "Scatter plot of original data with regression and bootstrap 95% confidence intervals (1000 resamples) of oleic acid (C18:1) \nconcentration for winter rye and winter wheat forages during the grazing period.") +  
   
   scale_y_continuous(breaks = seq(0, 8, 1), 
@@ -403,7 +403,7 @@ qqline(resid(C182.2))
 
 #regression coefficients
 summary(C182.2, ddf = "Kenward-Roger")
-round(confint(C182.2), 4)
+round(confint(C182.2), 3)
 anova(C182.2, ddf = "Kenward-Roger")
 
 #R squared
@@ -474,7 +474,7 @@ quantile(data.frame(data.frame(boot.ci.C182)$X94 - data.frame(boot.ci.C182)$X47)
   theme_classic() +
   
   labs(x = "Day of grazing period", 
-       y = "Linoleic acid, g 100g\u207B\u00B9") +
+       y = "Linoleic acid, g 100g\u207B\u00B9 of total fatty acids") +
   
   scale_y_continuous(breaks = seq(4, 13, 1), 
                      limits = c(4, 13.5), expand = c(0,0)) +
@@ -498,7 +498,7 @@ quantile(data.frame(data.frame(boot.ci.C182)$X94 - data.frame(boot.ci.C182)$X47)
 ```{r, include = F}
 #model
 C183 = lmer(C183 ~ Day*Forage + (1|Pen) + (1|Paddock/Forage), 
-            data = within(Fatty_acids, Forage <- relevel(Forage, ref = "Rye")))
+            data = within(Fatty_acids, Forage <- relevel(Forage, ref = "Wheat")))
 
 #diagnostics
 plot(C183, main = "Residuals vs fitted")
@@ -507,7 +507,7 @@ qqline(resid(C183))
 
 #regression coefficients
 summary(C183, ddf = "Kenward-Roger")
-round(confint(C183), 4)
+round(confint(C183), 3)
 anova(C183, ddf = "Kenward-Roger")
 
 #R squared
@@ -573,7 +573,7 @@ quantile(data.frame(data.frame(boot.ci.C183)$X94 - data.frame(boot.ci.C183)$X47)
   theme_classic() +
   
   labs(x = "Day of grazing period", 
-       y = "\u03B1-linolenic acid, g 100g\u207B\u00B9") +
+       y = "\u03B1-linolenic acid, g 100g\u207B\u00B9 of total fatty acids") +
   
   scale_y_continuous(breaks = seq(50, 80, 5), 
                      limits = c(49, 80), expand = c(0,0)) +
@@ -597,7 +597,7 @@ quantile(data.frame(data.frame(boot.ci.C183)$X94 - data.frame(boot.ci.C183)$X47)
 ```{r, include = F}
 #model
 C200.2 = lmer(C200 ~ poly(Day, 2)*Forage + (1|Pen) + (1|Paddock/Forage), 
-              data = within(Fatty_acids, Forage <- relevel(Forage, ref = "Rye")))
+              data = within(Fatty_acids, Forage <- relevel(Forage, ref = "Wheat")))
 
 #diagnostics
 plot(C200.2, main = "Residuals vs fitted")
@@ -606,7 +606,7 @@ qqline(resid(C200.2))
 
 #regression coefficients
 summary(C200.2, ddf = "Kenward-Roger")
-round(confint(C200.2), 4)
+round(confint(C200.2), 3)
 anova(C200.2, ddf = "Kenward-Roger")
 
 #R squared
@@ -653,7 +653,7 @@ newDat.C200 <- cbind(newDat.C200, confint(boot.ci.C200, type = "perc"))
   theme_classic() +
   
   labs(x = "Day of grazing period", 
-       y = "Arachidic acid, g 100g\u207B\u00B9", 
+       y = "Arachidic acid, g 100g\u207B\u00B9 of total fatty acids", 
        caption = "Scatter plot of original data with regression and bootstrap 95% confidence intervals (1000 resamples) of arachidic acid (C20:0) \nconcentration for winter rye and winter wheat forages during the grazing period.") +
   
   scale_y_continuous(breaks = seq(0, 3, 0.5), 
@@ -677,7 +677,7 @@ newDat.C200 <- cbind(newDat.C200, confint(boot.ci.C200, type = "perc"))
 ```{r, include = F}
 #model
 C220 = lmer(C220 ~ Day*Forage + (1|Pen) + (1|Paddock/Forage), 
-            data = within(Fatty_acids, Forage <- relevel(Forage, ref = "Rye")))
+            data = within(Fatty_acids, Forage <- relevel(Forage, ref = "Wheat")))
 
 #diagnostics
 plot(C220, main = "Residuals vs fitted")
@@ -686,7 +686,7 @@ qqline(resid(C220))
 
 #regression coefficients
 summary(C220, ddf = "Kenward-Roger")
-round(confint(C220), 4)
+round(confint(C220), 3)
 anova(C220, ddf = "Kenward-Roger")
 
 #R squared
@@ -732,7 +732,7 @@ newDat.C220 <- cbind(newDat.C220, confint(boot.ci.C200, type = "perc"))
   theme_classic() +
   
   labs(x = "Day of grazing period", 
-       y = "Behenic acid, g 100g\u207B\u00B9", 
+       y = "Behenic acid, g 100g\u207B\u00B9 of total fatty acids", 
        caption = "Scatter plot of original data with regression and bootstrap 95% confidence intervals (1000 resamples) of behenic acid (C22:0) \nconcentration for winter rye and winter wheat forages during the grazing period.") +
   
   scale_y_continuous(breaks = seq(0, 2.5, 0.5), 
@@ -772,7 +772,7 @@ mean(d$other)
 ```{r, include = F}
 #model
 C240 = lmer(C240 ~ Day*Forage + (1|Pen) + (1|Paddock/Forage), 
-            data = within(Fatty_acids, Forage <- relevel(Forage, ref = "Rye")))
+            data = within(Fatty_acids, Forage <- relevel(Forage, ref = "Wheat")))
 
 #diagnostics
 plot(C240, main = "Residuals vs fitted")
@@ -781,7 +781,7 @@ qqline(resid(C240))
 
 #regression coefficients
 summary(C240, ddf = "Kenward-Roger")
-round(confint(C240), 4)
+round(confint(C240), 3)
 anova(C240, ddf = "Kenward-Roger")
 
 #R squared
@@ -827,7 +827,7 @@ newDat.C240 <- cbind(newDat.C240, confint(boot.ci.C240, type = "perc"))
   theme_classic() +
   
   labs(x = "Day of grazing period", 
-       y = "Lignoceric acid, g 100g\u207B\u00B9", 
+       y = "Lignoceric acid, g 100g\u207B\u00B9 of total fatty acids", 
        caption = "Scatter plot of original data with regression and bootstrap 95% confidence intervals (1000 resamples) of lignoceric acid (C24:0) \nconcentration for winter rye and winter wheat forages during the grazing period.") +
   
   scale_y_continuous(breaks = seq(0, 1.5, 0.25), 
@@ -861,7 +861,7 @@ qqline(resid(ratio.2))
 
 #regression coefficients
 summary(ratio.2, ddf = "Kenward-Roger")
-round(confint(ratio.2), 4)
+round(confint(ratio.2), 3)
 anova(ratio.2, ddf = "Kenward-Roger")
 
 #R squared
