@@ -1,40 +1,55 @@
-```{r, include = F, message = F, warning = F}
+---
+title: "Fatty acid composition of forages throughout the grazing interval "
+author: "Hannah Phillips"
+date: "April 29, 2020"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(message = F, warning = F)
+```
+
+## packages
+```{r}
 library(readxl) #read data
 library(tidyverse) #piping
 library(lme4) #lmer
-library(lmerTest) # KR ddf
+library(lmerTest) #KR ddf
 library(MuMIn) #r.squaredGLMM
 library(ggplot2) #plots
 library(merTools)
 library(afex) #CIs
 
-Fatty_acids <- read_excel("C:/Users/Hannah/Desktop/Forage paper/Fatty acids/Fatty_acid_data.xlsx") %>% 
+Fatty_acids <- 
+  read_excel("C:/Users/Hannah/Desktop/Forage paper/Fatty acids/R_project/Fatty_acid_data.xlsx") %>% 
   mutate_at(vars(Forage, Paddock, Pen), as.factor)
 
-  Fatty_acids[,6:16] = Fatty_acids[,6:16]*100
+Fatty_acids[,6:16] <- Fatty_acids[,6:16]*100
 ```
 
 # Create dataset to use for bootstrap predictions & function
-```{r, include = F}
-#create data to make predictions from
-newDat = data.frame(Day = rep(0:46, 2), 
-                    Forage = c(rep("Rye", 47), 
-                               rep("Wheat", 47)), 
-                    Pen = NA, 
-                    Paddock = NA)
+```{r}
+#create dataset
+newDat <- 
+  data.frame(
+    Day = rep(0:46, 2), 
+    Forage = c(rep("Rye", 47), rep("Wheat", 47)), 
+    Pen = NA, 
+    Paddock = NA
+  )
 
 #create prediction function
-predict.fun <- function(my.lmm) {
-  predict(my.lmm, newdata = newDat, re.form = NA) 
-}
+predict.fun <- 
+  function(my.lmm) {
+    predict(my.lmm, newdata = newDat, re.form = NA) 
+  }
 ```
 
 # C140 model
-```{r, message = F}
+```{r}
 #model
-C140 = lmer(C140 ~ Day*Forage + (1|Pen) + (1|Paddock/Forage), 
-            data = within(Fatty_acids, 
-                          Forage <- relevel(Forage, ref = "Wheat")))
+C140 <- lmer(C140 ~ Day*Forage + (1|Pen) + (1|Paddock/Forage), 
+             data = within(Fatty_acids, Forage <- relevel(Forage, ref = "Wheat")))
 
 #diagnostics
 plot(C140, main = "Residuals vs fitted")
@@ -54,9 +69,9 @@ r.squaredGLMM(C140)
 ```
 
 # C140 plot
-```{r, echo = F}
+```{r}
 # Predicted fitted values
-newDat.C140 = newDat
+newDat.C140 <- newDat
 newDat.C140$fit <- predict.fun(C140)
 
 # 95% confidence intervals based on 1000 bootstrap resamples
@@ -66,63 +81,62 @@ newDat.C140 <- cbind(newDat.C140, confint(boot.ci.C140, type = "perc"))
 {
   ggplot(data = Fatty_acids, 
          aes(x = Day, y = C140, color = Forage)) + 
-  
-  geom_point(size = 3, 
-             show.legend = T,
-             position = position_jitter(h = 0.01, w = 0.01),
-             alpha = 0.5) +
-  
-  scale_color_manual(breaks = c("Rye", "Wheat"), 
-                     values = c("darkred", "dodgerblue4")) + 
-  
-  geom_line(data = newDat.C140, 
-            aes(x = Day, y = newDat.C140$fit, group = Forage), 
-            size = 2) +
-  
-  geom_ribbon(data = subset(newDat.C140, Forage == "Rye"), 
-              aes(x = Day, ymin =`2.5 %`, ymax = `97.5 %`),
-              fill = "darksalmon", 
-              alpha = 0.5, 
-              inherit.aes = FALSE) +
-  
-  geom_ribbon(data = subset(newDat.C140, Forage == "Wheat"), 
-              aes(x = Day, ymin = `2.5 %`, ymax = `97.5 %`),
-              fill = "lightskyblue1", alpha = 0.5, inherit.aes = FALSE) +
-  
-  theme_classic() +
     
-  labs(x = "Day of grazing period", 
-       y = "Myristic acid, g 100g\u207B\u00B9 of total fatty acids", 
-       caption = "Scatter plot of original data with regression and bootstrap 95% confidence intervals (1000 resamples) of myristic acid (C14:0) \nconcentration for winter rye and winter wheat forages during the grazing period.") +  
-  
-  #labs(x = "Day of grazing period", 
-      #y = "Myristic acid, g 100g\u207B\u00B9", 
-       #caption = expression(atop("Scatter plot of original data with regression and bootstrap 95% confidence intervals (1000 resamples) of myristic acid (C14:0) concentration", 
-                                 #paste("for rye and wheat forages during the grazing period. ", 
-                                       #R^{2}*""[(m)] == 0.45)))) +
-  
-  scale_y_continuous(breaks = seq(0, 4, 0.5), 
-                     limits = c(0, 4), expand = c(0,0)) +
-  
-  scale_x_continuous(breaks = seq(0, 46, 2), limits = c(-1, 47), expand = c(0,0)) +
-  
-  theme(axis.title = element_text(size = 20),
-        plot.caption = element_text(size = 18, hjust = 0),   
-        axis.text = element_text(size = 18, colour = "black"),
-        legend.position = c(.1, .9),
-        legend.title = element_blank(),
-        legend.direction = "vertical",
-        legend.text = element_text(size = 20),
-        axis.title.y = element_text(margin = margin(t = 0, r = 20, b = 0, l = 0)),
-        axis.title.x = element_text(margin = margin(t = 10, r = 0, b = 10, l = 0)))
-  }
+    geom_point(size = 3, 
+               show.legend = T, 
+               position = position_jitter(h = 0.01, w = 0.01), 
+               alpha = 0.5) +
+    
+    scale_color_manual(breaks = c("Rye", "Wheat"), 
+                       values = c("darkred", "dodgerblue4")) + 
+    
+    geom_line(data = newDat.C140, 
+              aes(x = Day, y = fit, group = Forage), 
+              size = 2) +
+    
+    geom_ribbon(data = subset(newDat.C140, Forage == "Rye"), 
+                aes(x = Day, ymin =`2.5 %`, ymax = `97.5 %`),
+                fill = "darksalmon", 
+                alpha = 0.5, 
+                inherit.aes = F) +
+    
+    geom_ribbon(data = subset(newDat.C140, Forage == "Wheat"), 
+                aes(x = Day, ymin = `2.5 %`, ymax = `97.5 %`),
+                fill = "lightskyblue1", 
+                alpha = 0.5, 
+                inherit.aes = F) +
+    
+    theme_classic() +
+    
+    labs(x = "Grazing interval, day", 
+         y = "Myristic acid, g 100g\u207B\u00B9 of total fatty acids", 
+         caption = "Scatter plot of data with regression (solid lines) and bootstrap 95% confidence intervals (transparent bands) based on \n1000 resamples for myristic acid (C14:0) concentrations of fatty acids in rye and wheat forages during the grazing interval \n(day0 = 25 Apr; day46 = 10 Jun 2016).") +  
+    
+    scale_y_continuous(breaks = seq(0, 4, 0.5), 
+                       limits = c(0, 4), 
+                       expand = c(0,0)) +
+    
+    scale_x_continuous(breaks = seq(0, 46, 2), 
+                       limits = c(-1, 47), 
+                       expand = c(0,0)) +
+    
+    theme(axis.title = element_text(size = 20),
+          plot.caption = element_text(size = 18, hjust = 0),   
+          axis.text = element_text(size = 18, colour = "black"),
+          legend.position = c(.1, .9),
+          legend.title = element_blank(),
+          legend.direction = "vertical",
+          legend.text = element_text(size = 20),
+          axis.title.y = element_text(margin = margin(t = 0, r = 20, b = 0, l = 0)),
+          axis.title.x = element_text(margin = margin(t = 10, r = 0, b = 10, l = 0)))
+}
 ```
 
 # C160 model
-```{r, include = F}
+```{r}
 #model
-C160 = lmer(C160 ~ Day*Forage + (1|Pen) + (1|Paddock/Forage), 
-            data = within(Fatty_acids, Forage <- relevel(Forage, ref = "Rye")))
+C160 <- lmer(C160 ~ Day*Forage + (1|Pen) + (1|Paddock/Forage), 
+             data = within(Fatty_acids, Forage <- relevel(Forage, ref = "Rye")))
 
 #diagnostics
 plot(C160, main = "Residuals vs fitted")
@@ -139,9 +153,9 @@ r.squaredGLMM(C160)
 ```
 
 # C160 plot
-```{r, echo = F}
+```{r}
 # Predicted Y values from model that excludes random effects
-newDat.C160 = newDat
+newDat.C160 <- newDat
 newDat.C160$fit <- predict.fun(C160)
 
 # 95% confidence intervals based on 1000 bootstrap resamples
@@ -181,57 +195,60 @@ quantile(data.frame(data.frame(boot.ci.C160)$X94 - data.frame(boot.ci.C160)$X47)
 {
   ggplot(data = Fatty_acids, 
          aes(x = Day, y = C160, color = Forage)) + 
-  
-  geom_point(size = 1.5, 
-             show.legend = T,
-             position = position_jitter(h = 0.1, w = 0.1),
-             alpha = 0.5) + 
-  
-  scale_color_manual(breaks = c("Rye", "Wheat"), 
-                     values = c("darkred", "dodgerblue4")) + 
-  
-  geom_line(data = newDat.C160, 
-            aes(x = Day, y = fit, group = Forage), 
-            size = 1) +
-  
-  geom_ribbon(data = subset(newDat.C160, Forage == "Rye"), 
-              aes(x = Day, ymin =`2.5 %`, ymax = `97.5 %`),
-              fill = "darksalmon", 
-              alpha = 0.5, 
-              inherit.aes = FALSE) +
-  
-  geom_ribbon(data = subset(newDat.C160, Forage == "Wheat"), 
-              aes(x = Day, ymin = `2.5 %`, ymax = `97.5 %`),
-              fill = "lightskyblue1", alpha = 0.5, inherit.aes = FALSE) +
-  
-  theme_classic() +
-  
-  labs(x = "Day of grazing period", 
-       y = "Palmitic acid, g 100g\u207B\u00B9 of total fatty acids") +
-  
-  scale_y_continuous(breaks = seq(10, 24, 2), 
-                     limits = c(10, 25), expand = c(0,0)) +
-  
-  scale_x_continuous(breaks = seq(0, 46, 2), limits = c(-1, 47), expand = c(0, 0)) +
-  
- 
-  theme(axis.title = element_text(size = 14),
-        plot.caption = element_text(size = 11, hjust = 0),   
-        axis.text = element_text(size = 11, colour = "black"),
-        legend.position = c(.1, .9),
-        legend.title = element_blank(),
-        legend.direction = "vertical",
-        legend.text = element_text(size = 11),
-        axis.title.y = element_text(margin = margin(t = 0, r = 20, b = 0, l = 0)),
-        axis.title.x = element_text(margin = margin(t = 10, r = 0, b = 10, l = 0)))
+    
+    geom_point(size = 1.5, 
+               show.legend = T,
+               position = position_jitter(h = 0.1, w = 0.1),
+               alpha = 0.5) + 
+    
+    scale_color_manual(breaks = c("Rye", "Wheat"), 
+                       values = c("darkred", "dodgerblue4")) + 
+    
+    geom_line(data = newDat.C160, 
+              aes(x = Day, y = fit, group = Forage), 
+              size = 1) +
+    
+    geom_ribbon(data = subset(newDat.C160, Forage == "Rye"), 
+                aes(x = Day, ymin =`2.5 %`, ymax = `97.5 %`),
+                fill = "darksalmon", 
+                alpha = 0.5, 
+                inherit.aes = FALSE) +
+    
+    geom_ribbon(data = subset(newDat.C160, Forage == "Wheat"), 
+                aes(x = Day, ymin = `2.5 %`, ymax = `97.5 %`),
+                fill = "lightskyblue1", alpha = 0.5, inherit.aes = FALSE) +
+    
+    theme_classic() +
+    
+    labs(x = "Grazing interval, day", 
+         y = "Palmitic acid, g 100g\u207B\u00B9 of total fatty acids") +
+    
+    scale_y_continuous(breaks = seq(10, 24, 2), 
+                       limits = c(10, 25), 
+                       expand = c(0,0)) +
+    
+    scale_x_continuous(breaks = seq(0, 46, 2), 
+                       limits = c(-1, 47), 
+                       expand = c(0, 0)) +
+    
+    
+    theme(axis.title = element_text(size = 14),
+          plot.caption = element_text(size = 11, hjust = 0),   
+          axis.text = element_text(size = 11, colour = "black"),
+          legend.position = c(.1, .9),
+          legend.title = element_blank(),
+          legend.direction = "vertical",
+          legend.text = element_text(size = 11),
+          axis.title.y = element_text(margin = margin(t = 0, r = 20, b = 0, l = 0)),
+          axis.title.x = element_text(margin = margin(t = 10, r = 0, b = 10, l = 0)))
 }
 ```
 
 # C180 model
-```{r, include = F}
+```{r}
 #model
-C180 = lmer(C180 ~ Day*Forage + (1|Pen) + (1|Paddock/Forage), 
-            data = within(Fatty_acids, Forage <- relevel(Forage, ref = "Wheat")))
+C180 <- lmer(C180 ~ Day*Forage + (1|Pen) + (1|Paddock/Forage), 
+             data = within(Fatty_acids, Forage <- relevel(Forage, ref = "Wheat")))
 
 #diagnostics
 plot(C180, main = "Residuals vs fitted")
@@ -247,72 +264,76 @@ anova(C180, ddf = "Kenward-Roger")
 r.squaredGLMM(C180)
 
 # Predicted Y values from model that excludes random effects
-newDat.C180 = newDat
+newDat.C180 <- newDat
 newDat.C180$fit <- predict.fun(C180)
 
 # 95% confidence intervals based on 1000 bootstrap resamples
 boot.ci.C180 <- bootMer(C180, predict.fun, nsim = 1000, seed = 1) 
 newDat.C180 <- cbind(newDat.C180, confint(boot.ci.C180, type = "perc"))
-
 ```
 
 # C180 plot
-```{r, echo = F}
+```{r}
 {
   ggplot(data = Fatty_acids, 
          aes(x = Day, y = C180, color = Forage)) + 
-  
-  geom_point(size = 3, 
-             show.legend = T,
-             position = position_jitter(h = 0.01, w = 0.01),
-             alpha = 0.5) + 
-  
-  scale_color_manual(breaks = c("Rye", "Wheat"), 
-                     values = c("darkred", "dodgerblue4")) + 
-  
-  geom_line(data = newDat.C180, 
-            aes(x = Day, y = fit, group = Forage), 
-            size = 2) +
-  
-  geom_ribbon(data = subset(newDat.C180, Forage == "Rye"), 
-              aes(x = Day, ymin =`2.5 %`, ymax = `97.5 %`),
-              fill = "darksalmon", 
-              alpha = 0.5, 
-              inherit.aes = FALSE) +
-  
-  geom_ribbon(data = subset(newDat.C180, Forage == "Wheat"), 
-              aes(x = Day, ymin = `2.5 %`, ymax = `97.5 %`),
-              fill = "lightskyblue1", alpha = 0.5, inherit.aes = FALSE) +
-  
-  theme_classic() +
-  
-  labs(x = "Day of grazing period", 
-       y = "Stearic acid, g 100g\u207B\u00B9 of total fatty acids", 
-       caption = "Scatter plot of original data with regression and bootstrap 95% confidence intervals (1000 resamples) of stearic acid (C18:0) \nconcentration for winter rye and winter wheat forages during the grazing period.") +
     
-  scale_y_continuous(breaks = seq(0, 3.5, .5), 
-                     limits = c(-0.05, 3.5), expand = c(0,0)) +
-  
-  scale_x_continuous(breaks = seq(0, 46, 2), limits = c(-1, 47), expand = c(0, 0)) +
-  
- 
-  theme(axis.title = element_text(size = 20),
-        plot.caption = element_text(size = 18, hjust = 0),   
-        axis.text = element_text(size = 18, colour = "black"),
-        legend.position = c(.1, .9),
-        legend.title = element_blank(),
-        legend.direction = "vertical",
-        legend.text = element_text(size = 20),
-        axis.title.y = element_text(margin = margin(t = 0, r = 20, b = 0, l = 0)),
-        axis.title.x = element_text(margin = margin(t = 10, r = 0, b = 10, l = 0)))
+    geom_point(size = 3, 
+               show.legend = T,
+               position = position_jitter(h = 0.01, w = 0.01),
+               alpha = 0.5) + 
+    
+    scale_color_manual(breaks = c("Rye", "Wheat"), 
+                       values = c("darkred", "dodgerblue4")) + 
+    
+    geom_line(data = newDat.C180, 
+              aes(x = Day, y = fit, group = Forage), 
+              size = 2) +
+    
+    geom_ribbon(data = subset(newDat.C180, Forage == "Rye"), 
+                aes(x = Day, ymin =`2.5 %`, ymax = `97.5 %`),
+                fill = "darksalmon", 
+                alpha = 0.5, 
+                inherit.aes = FALSE) +
+    
+    geom_ribbon(data = subset(newDat.C180, Forage == "Wheat"), 
+                aes(x = Day, ymin = `2.5 %`, ymax = `97.5 %`),
+                fill = "lightskyblue1", 
+                alpha = 0.5, 
+                inherit.aes = FALSE) +
+    
+    theme_classic() +
+    
+    labs(x = "Grazing interval, day", 
+         y = "Stearic acid, g 100g\u207B\u00B9 of total fatty acids", 
+         caption = "Scatter plot of data with regression (solid lines) and bootstrap 95% confidence intervals (transparent bands) based on \n1000 resamples for stearic acid (C18:0) concentrations of fatty acids in rye and wheat forages during the grazing interval \n(day0 = 25 Apr; day46 = 10 Jun 2016).") +
+    
+    scale_y_continuous(breaks = seq(0, 3.5, .5), 
+                       limits = c(-0.05, 3.5), 
+                       expand = c(0,0)) +
+    
+    scale_x_continuous(breaks = seq(0, 46, 2), 
+                       limits = c(-1, 47), 
+                       expand = c(0, 0)) +
+    
+    
+    theme(axis.title = element_text(size = 20),
+          plot.caption = element_text(size = 18, hjust = 0),   
+          axis.text = element_text(size = 18, colour = "black"),
+          legend.position = c(.1, .9),
+          legend.title = element_blank(),
+          legend.direction = "vertical",
+          legend.text = element_text(size = 20),
+          axis.title.y = element_text(margin = margin(t = 0, r = 20, b = 0, l = 0)),
+          axis.title.x = element_text(margin = margin(t = 10, r = 0, b = 10, l = 0)))
 }
 ```
 
 # C181 model
-```{r, include = F}
+```{r}
 #model
-C181.2 = lmer(C181 ~ poly(Day, 2)*Forage + (1|Pen) + (1|Paddock/Forage), 
-              data = within(Fatty_acids, Forage <- relevel(Forage, ref = "Wheat")))
+C181.2 <- lmer(C181 ~ poly(Day, 2)*Forage + (1|Pen) + (1|Paddock/Forage), 
+               data = within(Fatty_acids, Forage <- relevel(Forage, ref = "Wheat")))
 
 #diagnostics
 plot(C181.2, main = "Residuals vs fitted")
@@ -329,9 +350,9 @@ r.squaredGLMM(C181.2)
 ```
 
 # C181 plot
-```{r, echo = F}
+```{r}
 # Predicted Y values from model that excludes random effects
-newDat.C181 = newDat
+newDat.C181 <- newDat
 newDat.C181$fit <- predict.fun(C181.2)
 
 # 95% confidence intervals based on 1000 bootstrap resamples
@@ -342,59 +363,64 @@ newDat.C181 <- cbind(newDat.C181, confint(boot.ci.C181, type = "perc"))
 {
   ggplot(data = Fatty_acids, 
          aes(x = Day, y = C181, color = Forage)) + 
-  
-  geom_point(size = 3, 
-             show.legend = T,
-             position = position_jitter(h = 0.01, w = 0.01),
-             alpha = 0.5
-) + 
-  
-  scale_color_manual(breaks = c("Rye", "Wheat"), 
-                     values = c("darkred", "dodgerblue4")) + 
-  
-  geom_line(data = newDat.C181, 
-            aes(x = Day, y = newDat.C181$fit, group = Forage), 
-            size = 2) +
-  
-  geom_ribbon(data = subset(newDat.C181, Forage == "Rye"), 
-              aes(x = Day, ymin =`2.5 %`, ymax = `97.5 %`),
-              fill = "darksalmon", 
-              alpha = 0.5, 
-              inherit.aes = FALSE) +
-  
-  geom_ribbon(data = subset(newDat.C181, Forage == "Wheat"), 
-              aes(x = Day, ymin = `2.5 %`, ymax = `97.5 %`),
-              fill = "lightskyblue1", alpha = 0.5, inherit.aes = FALSE) +
-  
-  theme_classic() +
     
-  labs(x = "Day of grazing period", 
-       y = "Oleic acid, g 100g\u207B\u00B9 of total fatty acids", 
-       caption = "Scatter plot of original data with regression and bootstrap 95% confidence intervals (1000 resamples) of oleic acid (C18:1) \nconcentration for winter rye and winter wheat forages during the grazing period.") +  
-  
-  scale_y_continuous(breaks = seq(0, 8, 1), 
-                     limits = c(-.2, 8), expand = c(0,0)) +
-  
-  scale_x_continuous(breaks = seq(0, 46, 2), limits = c(-1, 47), expand = c(0,0)) +
-  
-  
-  theme(axis.title = element_text(size = 20),
-        plot.caption = element_text(size = 18, hjust = 0),   
-        axis.text = element_text(size = 18, colour = "black"),
-        legend.position = c(.1, .90),
-        legend.title = element_blank(),
-        legend.direction = "vertical",
-        legend.text = element_text(size = 20),
-        axis.title.y = element_text(margin = margin(t = 0, r = 20, b = 0, l = 0)),
-        axis.title.x = element_text(margin = margin(t = 10, r = 0, b = 10, l = 0)))
+    geom_point(size = 3, 
+               show.legend = T,
+               position = position_jitter(h = 0.01, w = 0.01),
+               alpha = 0.5
+    ) + 
+    
+    scale_color_manual(breaks = c("Rye", "Wheat"), 
+                       values = c("darkred", "dodgerblue4")) + 
+    
+    geom_line(data = newDat.C181, 
+              aes(x = Day, y = fit, group = Forage), 
+              size = 2) +
+    
+    geom_ribbon(data = subset(newDat.C181, Forage == "Rye"), 
+                aes(x = Day, ymin =`2.5 %`, ymax = `97.5 %`),
+                fill = "darksalmon", 
+                alpha = 0.5, 
+                inherit.aes = F) +
+    
+    geom_ribbon(data = subset(newDat.C181, Forage == "Wheat"), 
+                aes(x = Day, ymin = `2.5 %`, ymax = `97.5 %`),
+                fill = "lightskyblue1", 
+                alpha = 0.5, 
+                inherit.aes = F) +
+    
+    theme_classic() +
+    
+    labs(x = "Grazing interval, day", 
+         y = "Oleic acid, g 100g\u207B\u00B9 of total fatty acids", 
+         caption = "Scatter plot of data with regression (solid lines) and bootstrap 95% confidence intervals (transparent bands) based on \n1000 resamples for oleic acid (C18:1) concentrations of fatty acids in rye and wheat forages during the grazing interval \n(day0 = 25 Apr; day46 = 10 Jun 2016).") +  
+    
+    scale_y_continuous(breaks = seq(0, 8, 1), 
+                       limits = c(-.2, 8), 
+                       expand = c(0,0)) +
+    
+    scale_x_continuous(breaks = seq(0, 46, 2), 
+                       limits = c(-1, 47), 
+                       expand = c(0,0)) +
+    
+    
+    theme(axis.title = element_text(size = 20),
+          plot.caption = element_text(size = 18, hjust = 0),   
+          axis.text = element_text(size = 18, colour = "black"),
+          legend.position = c(.1, .90),
+          legend.title = element_blank(),
+          legend.direction = "vertical",
+          legend.text = element_text(size = 20),
+          axis.title.y = element_text(margin = margin(t = 0, r = 20, b = 0, l = 0)),
+          axis.title.x = element_text(margin = margin(t = 10, r = 0, b = 10, l = 0)))
 }
 ```
 
 # C182 model
-```{r, include = F}
+```{r}
 #model
-C182.2 = lmer(C182 ~ poly(Day, 2)*Forage + (1|Pen) + (1|Paddock/Forage), 
-              data = within(Fatty_acids, Forage <- relevel(Forage, ref = "Rye")))
+C182.2 <- lmer(C182 ~ poly(Day, 2)*Forage + (1|Pen) + (1|Paddock/Forage), 
+               data = within(Fatty_acids, Forage <- relevel(Forage, ref = "Rye")))
 
 #diagnostics
 plot(C182.2, main = "Residuals vs fitted")
@@ -411,9 +437,9 @@ r.squaredGLMM(C182.2)
 ```
 
 # C182 plot
-```{r, echo = F}
+```{r}
 # Predicted Y values from model that excludes random effects
-newDat.C182 = newDat
+newDat.C182 <- newDat
 newDat.C182$fit <- predict.fun(C182.2)
 
 # 95% confidence intervals based on 1000 bootstrap resamples
@@ -448,57 +474,62 @@ quantile(data.frame(data.frame(boot.ci.C182)$X94 - data.frame(boot.ci.C182)$X47)
 {
   ggplot(data = Fatty_acids, 
          aes(x = Day, y = C182, color = Forage)) + 
-  
-  geom_point(size = 1.5, 
-             show.legend = T, 
-             position = position_jitter(h = 0.1, w = 0.1),
-             alpha = 0.5) + 
-  
-  scale_color_manual(breaks = c("Rye", "Wheat"), 
-                     values = c("darkred", "dodgerblue4")) + 
-  
-  geom_line(data = newDat.C182, 
-            aes(x = Day, y = fit, group = Forage), 
-            size = 1) +
-  
-  geom_ribbon(data = subset(newDat.C182, Forage == "Rye"), 
-              aes(x = Day, ymin =`2.5 %`, ymax = `97.5 %`),
-              fill = "darksalmon", 
-              alpha = 0.5, 
-              inherit.aes = FALSE) +
-  
-  geom_ribbon(data = subset(newDat.C182, Forage == "Wheat"), 
-              aes(x = Day, ymin = `2.5 %`, ymax = `97.5 %`),
-              fill = "lightskyblue1", alpha = 0.5, inherit.aes = FALSE) +
-  
-  theme_classic() +
-  
-  labs(x = "Day of grazing period", 
-       y = "Linoleic acid, g 100g\u207B\u00B9 of total fatty acids") +
-  
-  scale_y_continuous(breaks = seq(4, 13, 1), 
-                     limits = c(4, 13.5), expand = c(0,0)) +
-  
-  scale_x_continuous(breaks = seq(0, 46, 2), limits = c(-1, 47), expand = c(0,0)) +
-  
-
-  theme(axis.title = element_text(size = 14),
-        plot.caption = element_text(size = 11, hjust = 0),   
-        axis.text = element_text(size = 11, colour = "black"),
-        legend.position = c(.1, .9),
-        legend.title = element_blank(),
-        legend.direction = "vertical",
-        legend.text = element_text(size = 11),
-        axis.title.y = element_text(margin = margin(t = 0, r = 20, b = 0, l = 0)),
-        axis.title.x = element_text(margin = margin(t = 10, r = 0, b = 10, l = 0)))
+    
+    geom_point(size = 1.5, 
+               show.legend = T, 
+               position = position_jitter(h = 0.1, w = 0.1),
+               alpha = 0.5) + 
+    
+    scale_color_manual(breaks = c("Rye", "Wheat"), 
+                       values = c("darkred", "dodgerblue4")) + 
+    
+    geom_line(data = newDat.C182, 
+              aes(x = Day, y = fit, group = Forage), 
+              size = 1) +
+    
+    geom_ribbon(data = subset(newDat.C182, Forage == "Rye"), 
+                aes(x = Day, ymin =`2.5 %`, ymax = `97.5 %`),
+                fill = "darksalmon", 
+                alpha = 0.5, 
+                inherit.aes = FALSE) +
+    
+    geom_ribbon(data = subset(newDat.C182, Forage == "Wheat"), 
+                aes(x = Day, ymin = `2.5 %`, ymax = `97.5 %`),
+                fill = "lightskyblue1", 
+                alpha = 0.5, 
+                inherit.aes = FALSE) +
+    
+    theme_classic() +
+    
+    labs(x = "Grazing interval, day", 
+         y = "Linoleic acid, g 100g\u207B\u00B9 of total fatty acids") +
+    
+    scale_y_continuous(breaks = seq(4, 13, 1), 
+                       limits = c(4, 13.5), 
+                       expand = c(0,0)) +
+    
+    scale_x_continuous(breaks = seq(0, 46, 2), 
+                       limits = c(-1, 47), 
+                       expand = c(0,0)) +
+    
+    
+    theme(axis.title = element_text(size = 14),
+          plot.caption = element_text(size = 11, hjust = 0),   
+          axis.text = element_text(size = 11, colour = "black"),
+          legend.position = c(.1, .9),
+          legend.title = element_blank(),
+          legend.direction = "vertical",
+          legend.text = element_text(size = 11),
+          axis.title.y = element_text(margin = margin(t = 0, r = 20, b = 0, l = 0)),
+          axis.title.x = element_text(margin = margin(t = 10, r = 0, b = 10, l = 0)))
 }
 ```
 
 # C183 model
-```{r, include = F}
+```{r}
 #model
-C183 = lmer(C183 ~ Day*Forage + (1|Pen) + (1|Paddock/Forage), 
-            data = within(Fatty_acids, Forage <- relevel(Forage, ref = "Wheat")))
+C183 <- lmer(C183 ~ Day*Forage + (1|Pen) + (1|Paddock/Forage), 
+             data = within(Fatty_acids, Forage <- relevel(Forage, ref = "Wheat")))
 
 #diagnostics
 plot(C183, main = "Residuals vs fitted")
@@ -515,9 +546,9 @@ r.squaredGLMM(C183)
 ```
 
 # C183 plot
-```{r, echo = F}
+```{r}
 # Predicted Y values from model that excludes random effects
-newDat.C183 = newDat
+newDat.C183 <- newDat
 newDat.C183$fit <- predict.fun(C183)
 
 # 95% confidence intervals based on 1000 bootstrap resamples
@@ -547,57 +578,62 @@ quantile(data.frame(data.frame(boot.ci.C183)$X94 - data.frame(boot.ci.C183)$X47)
 {
   ggplot(data = Fatty_acids, 
          aes(x = Day, y = C183, color = Forage)) + 
-  
-  geom_point(size = 1.5, 
-             show.legend = T, 
-             position = position_jitter(h = 0.1, w = 0.1),
-             alpha = 0.5) + 
-  
-  scale_color_manual(breaks = c("Rye", "Wheat"), 
-                     values = c("darkred", "dodgerblue4")) + 
-  
-  geom_line(data = newDat.C183, 
-            aes(x = Day, y = newDat.C183$fit, group = Forage), 
-            size = 1) +
-  
-  geom_ribbon(data = subset(newDat.C183, Forage == "Rye"), 
-              aes(x = Day, ymin =`2.5 %`, ymax = `97.5 %`),
-              fill = "darksalmon", 
-              alpha = 0.5, 
-              inherit.aes = FALSE) +
-  
-  geom_ribbon(data = subset(newDat.C183, Forage == "Wheat"), 
-              aes(x = Day, ymin = `2.5 %`, ymax = `97.5 %`),
-              fill = "lightskyblue1", alpha = 0.5, inherit.aes = FALSE) +
-  
-  theme_classic() +
-  
-  labs(x = "Day of grazing period", 
-       y = "\u03B1-linolenic acid, g 100g\u207B\u00B9 of total fatty acids") +
-  
-  scale_y_continuous(breaks = seq(50, 80, 5), 
-                     limits = c(49, 80), expand = c(0,0)) +
-  
-  scale_x_continuous(breaks = seq(0, 46, 2), limits = c(-1, 47), expand = c(0,0)) +
- 
-  theme(plot.title = element_text(hjust = .5),
-        axis.title = element_text(size = 14),
-        plot.caption = element_text(size = 11, hjust = 0),   
-        axis.text = element_text(size = 11, colour = "black"),
-        legend.position = c(.1, .1),
-        legend.title = element_blank(),
-        legend.direction = "vertical",
-        legend.text = element_text(size = 11),
-        axis.title.y = element_text(margin = margin(t = 0, r = 20, b = 0, l = 0)),
-        axis.title.x = element_text(margin = margin(t = 10, r = 0, b = 10, l = 0)))
+    
+    geom_point(size = 1.5, 
+               show.legend = T, 
+               position = position_jitter(h = 0.1, w = 0.1),
+               alpha = 0.5) + 
+    
+    scale_color_manual(breaks = c("Rye", "Wheat"), 
+                       values = c("darkred", "dodgerblue4")) + 
+    
+    geom_line(data = newDat.C183, 
+              aes(x = Day, y = fit, group = Forage), 
+              size = 1) +
+    
+    geom_ribbon(data = subset(newDat.C183, Forage == "Rye"), 
+                aes(x = Day, ymin =`2.5 %`, ymax = `97.5 %`),
+                fill = "darksalmon", 
+                alpha = 0.5, 
+                inherit.aes = FALSE) +
+    
+    geom_ribbon(data = subset(newDat.C183, Forage == "Wheat"), 
+                aes(x = Day, ymin = `2.5 %`, ymax = `97.5 %`),
+                fill = "lightskyblue1", 
+                alpha = 0.5, 
+                inherit.aes = FALSE) +
+    
+    theme_classic() +
+    
+    labs(x = "Grazing interval, day", 
+         y = "\u03B1-linolenic acid, g 100g\u207B\u00B9 of total fatty acids") +
+    
+    scale_y_continuous(breaks = seq(50, 80, 5), 
+                       limits = c(49, 80), 
+                       expand = c(0,0)) +
+    
+    scale_x_continuous(breaks = seq(0, 46, 2), 
+                       limits = c(-1, 47), 
+                       expand = c(0,0)) +
+    
+    theme(plot.title = element_text(hjust = .5),
+          axis.title = element_text(size = 14),
+          plot.caption = element_text(size = 11, hjust = 0),   
+          axis.text = element_text(size = 11, colour = "black"),
+          legend.position = c(.1, .1),
+          legend.title = element_blank(),
+          legend.direction = "vertical",
+          legend.text = element_text(size = 11),
+          axis.title.y = element_text(margin = margin(t = 0, r = 20, b = 0, l = 0)),
+          axis.title.x = element_text(margin = margin(t = 10, r = 0, b = 10, l = 0)))
 }
 ```
 
 # C200 model
-```{r, include = F}
+```{r}
 #model
-C200.2 = lmer(C200 ~ poly(Day, 2)*Forage + (1|Pen) + (1|Paddock/Forage), 
-              data = within(Fatty_acids, Forage <- relevel(Forage, ref = "Wheat")))
+C200.2 <- lmer(C200 ~ poly(Day, 2)*Forage + (1|Pen) + (1|Paddock/Forage), 
+               data = within(Fatty_acids, Forage <- relevel(Forage, ref = "Wheat")))
 
 #diagnostics
 plot(C200.2, main = "Residuals vs fitted")
@@ -614,9 +650,9 @@ r.squaredGLMM(C200.2)
 ```
 
 # C200 plot
-```{r, echo = F}
+```{r}
 # Predicted Y values from model that excludes random effects
-newDat.C200 = newDat
+newDat.C200 <- newDat
 newDat.C200$fit <- predict.fun(C200.2)
 
 # 95% confidence intervals based on 1000 bootstrap resamples
@@ -626,58 +662,63 @@ newDat.C200 <- cbind(newDat.C200, confint(boot.ci.C200, type = "perc"))
 {
   ggplot(data = Fatty_acids, 
          aes(x = Day, y = C200, color = Forage)) + 
-  
-  geom_point(size = 3, 
-             show.legend = T, 
-             position = position_jitter(h = 0.01, w = 0.01),
-             alpha = 0.5
-) + 
-  
-  scale_color_manual(breaks = c("Rye", "Wheat"), 
-                     values = c("darkred", "dodgerblue4")) + 
-  
-  geom_line(data = newDat.C200, 
-            aes(x = Day, y = newDat.C200$fit, group = Forage), 
-            size = 2) +
-  
-  geom_ribbon(data = subset(newDat.C200, Forage == "Rye"), 
-              aes(x = Day, ymin =`2.5 %`, ymax = `97.5 %`),
-              fill = "darksalmon", 
-              alpha = 0.5, 
-              inherit.aes = FALSE) +
-  
-  geom_ribbon(data = subset(newDat.C200, Forage == "Wheat"), 
-              aes(x = Day, ymin = `2.5 %`, ymax = `97.5 %`),
-              fill = "lightskyblue1", alpha = 0.5, inherit.aes = FALSE) +
-  
-  theme_classic() +
-  
-  labs(x = "Day of grazing period", 
-       y = "Arachidic acid, g 100g\u207B\u00B9 of total fatty acids", 
-       caption = "Scatter plot of original data with regression and bootstrap 95% confidence intervals (1000 resamples) of arachidic acid (C20:0) \nconcentration for winter rye and winter wheat forages during the grazing period.") +
-  
-  scale_y_continuous(breaks = seq(0, 3, 0.5), 
-                     limits = c(0, 3), expand = c(0,0)) +
-  
-  scale_x_continuous(breaks = seq(0, 46, 2), limits = c(-1, 47), expand = c(0,0)) +
-  
-  theme(axis.title = element_text(size = 20),
-        plot.caption = element_text(size = 18, hjust = 0),   
-        axis.text = element_text(size = 18, colour = "black"),
-        legend.position = c(.9, .90),
-        legend.title = element_blank(),
-        legend.direction = "vertical",
-        legend.text = element_text(size = 20),
-        axis.title.y = element_text(margin = margin(t = 0, r = 20, b = 0, l = 0)),
-        axis.title.x = element_text(margin = margin(t = 10, r = 0, b = 10, l = 0)))
+    
+    geom_point(size = 3, 
+               show.legend = T, 
+               position = position_jitter(h = 0.01, w = 0.01),
+               alpha = 0.5
+    ) + 
+    
+    scale_color_manual(breaks = c("Rye", "Wheat"), 
+                       values = c("darkred", "dodgerblue4")) + 
+    
+    geom_line(data = newDat.C200, 
+              aes(x = Day, y = fit, group = Forage), 
+              size = 2) +
+    
+    geom_ribbon(data = subset(newDat.C200, Forage == "Rye"), 
+                aes(x = Day, ymin =`2.5 %`, ymax = `97.5 %`),
+                fill = "darksalmon", 
+                alpha = 0.5, 
+                inherit.aes = FALSE) +
+    
+    geom_ribbon(data = subset(newDat.C200, Forage == "Wheat"), 
+                aes(x = Day, ymin = `2.5 %`, ymax = `97.5 %`),
+                fill = "lightskyblue1", 
+                alpha = 0.5, 
+                inherit.aes = FALSE) +
+    
+    theme_classic() +
+    
+    labs(x = "Grazing interval, day", 
+         y = "Arachidic acid, g 100g\u207B\u00B9 of total fatty acids", 
+         caption = "Scatter plot of data with regression (solid lines) and bootstrap 95% confidence intervals (transparent bands) based on \n1000 resamples for arachidic acid (C20:0) concentrations of fatty acids in rye and wheat forages during the grazing interval \n(day0 = 25 Apr; day46 = 10 Jun 2016).") +
+    
+    scale_y_continuous(breaks = seq(0, 3, 0.5), 
+                       limits = c(0, 3), 
+                       expand = c(0,0)) +
+    
+    scale_x_continuous(breaks = seq(0, 46, 2), 
+                       limits = c(-1, 47), 
+                       expand = c(0,0)) +
+    
+    theme(axis.title = element_text(size = 20),
+          plot.caption = element_text(size = 18, hjust = 0),   
+          axis.text = element_text(size = 18, colour = "black"),
+          legend.position = c(.9, .90),
+          legend.title = element_blank(),
+          legend.direction = "vertical",
+          legend.text = element_text(size = 20),
+          axis.title.y = element_text(margin = margin(t = 0, r = 20, b = 0, l = 0)),
+          axis.title.x = element_text(margin = margin(t = 10, r = 0, b = 10, l = 0)))
 }
 ```
 
 # C220 model
-```{r, include = F}
+```{r}
 #model
-C220 = lmer(C220 ~ Day*Forage + (1|Pen) + (1|Paddock/Forage), 
-            data = within(Fatty_acids, Forage <- relevel(Forage, ref = "Wheat")))
+C220 <- lmer(C220 ~ Day*Forage + (1|Pen) + (1|Paddock/Forage), 
+             data = within(Fatty_acids, Forage <- relevel(Forage, ref = "Wheat")))
 
 #diagnostics
 plot(C220, main = "Residuals vs fitted")
@@ -693,7 +734,7 @@ anova(C220, ddf = "Kenward-Roger")
 r.squaredGLMM(C220)
 
 # Predicted Y values from model that excludes random effects
-newDat.C220 = newDat
+newDat.C220 <- newDat
 newDat.C220$fit <- predict.fun(C220)
 
 # 95% confidence intervals based on 1000 bootstrap resamples
@@ -702,77 +743,94 @@ newDat.C220 <- cbind(newDat.C220, confint(boot.ci.C200, type = "perc"))
 ```
 
 # C220 plot
-```{r, echo = F}
+```{r}
 {
   ggplot(data = Fatty_acids, 
          aes(x = Day, y = C220, color = Forage)) + 
-  
-  geom_point(size = 3, 
-             show.legend = T,
-             position = position_jitter(h = 0.01, w = 0.01),
-             alpha = 0.5) + 
-  
-  scale_color_manual(breaks = c("Rye", "Wheat"), 
-                     values = c("darkred", "dodgerblue4")) + 
-  
-  geom_line(data = newDat.C220, 
-            aes(x = Day, y = fit, group = Forage), 
-            size = 2) +
-  
-  geom_ribbon(data = subset(newDat.C220, Forage == "Rye"), 
-              aes(x = Day, ymin =`2.5 %`, ymax = `97.5 %`),
-              fill = "darksalmon", 
-              alpha = 0.5, 
-              inherit.aes = FALSE) +
-  
-  geom_ribbon(data = subset(newDat.C220, Forage == "Wheat"), 
-              aes(x = Day, ymin = `2.5 %`, ymax = `97.5 %`),
-              fill = "lightskyblue1", alpha = 0.5, inherit.aes = FALSE) +
-  
-  theme_classic() +
-  
-  labs(x = "Day of grazing period", 
-       y = "Behenic acid, g 100g\u207B\u00B9 of total fatty acids", 
-       caption = "Scatter plot of original data with regression and bootstrap 95% confidence intervals (1000 resamples) of behenic acid (C22:0) \nconcentration for winter rye and winter wheat forages during the grazing period.") +
-  
-  scale_y_continuous(breaks = seq(0, 2.5, 0.5), 
-                     limits = c(0, 2.5), expand = c(0,0)) +
-  
-  scale_x_continuous(breaks = seq(0, 46, 2), limits = c(-1, 47), expand = c(0, 0)) +
-  
- 
-  theme(axis.title = element_text(size = 20),
-        plot.caption = element_text(size = 18, hjust = 0),   
-        axis.text = element_text(size = 18, colour = "black"),
-        legend.position = c(.1, .1),
-        legend.title = element_blank(),
-        legend.direction = "vertical",
-        legend.text = element_text(size = 20),
-        axis.title.y = element_text(margin = margin(t = 0, r = 20, b = 0, l = 0)),
-        axis.title.x = element_text(margin = margin(t = 10, r = 0, b = 10, l = 0)))
+    
+    geom_point(size = 3, 
+               show.legend = T,
+               position = position_jitter(h = 0.01, w = 0.01),
+               alpha = 0.5) + 
+    
+    scale_color_manual(breaks = c("Rye", "Wheat"), 
+                       values = c("darkred", "dodgerblue4")) + 
+    
+    geom_line(data = newDat.C220, 
+              aes(x = Day, y = fit, group = Forage), 
+              size = 2) +
+    
+    geom_ribbon(data = subset(newDat.C220, Forage == "Rye"), 
+                aes(x = Day, ymin =`2.5 %`, ymax = `97.5 %`),
+                fill = "darksalmon", 
+                alpha = 0.5, 
+                inherit.aes = F) +
+    
+    geom_ribbon(data = subset(newDat.C220, Forage == "Wheat"), 
+                aes(x = Day, ymin = `2.5 %`, ymax = `97.5 %`),
+                fill = "lightskyblue1", 
+                alpha = 0.5, 
+                inherit.aes = F) +
+    
+    theme_classic() +
+    
+    labs(x = "Grazing interval, day", 
+         y = "Behenic acid, g 100g\u207B\u00B9 of total fatty acids", 
+         caption = "Scatter plot of data with regression (solid lines) and bootstrap 95% confidence intervals (transparent bands) based on \n1000 resamples for behenic acid (C22:0) concentrations of fatty acids in rye and wheat forages during the grazing interval \n(day0 = 25 Apr; day46 = 10 Jun 2016).") +
+    
+    scale_y_continuous(breaks = seq(0, 2.5, 0.5), 
+                       limits = c(0, 2.5), 
+                       expand = c(0,0)) +
+    
+    scale_x_continuous(breaks = seq(0, 46, 2), 
+                       limits = c(-1, 47), 
+                       expand = c(0, 0)) +
+    
+    
+    theme(axis.title = element_text(size = 20),
+          plot.caption = element_text(size = 18, hjust = 0),   
+          axis.text = element_text(size = 18, colour = "black"),
+          legend.position = c(.1, .1),
+          legend.title = element_blank(),
+          legend.direction = "vertical",
+          legend.text = element_text(size = 20),
+          axis.title.y = element_text(margin = margin(t = 0, r = 20, b = 0, l = 0)),
+          axis.title.x = element_text(margin = margin(t = 10, r = 0, b = 10, l = 0)))
 }
 ```
 
 # C221 + C201
-```{r, include = F}
-a = subset(Fatty_acids, Day == 0 & Forage == "Wheat") %>% mutate(other = C221 + C201)
+```{r}
+a <- 
+  subset(Fatty_acids, Day == 0 & Forage == "Wheat") %>% 
+  mutate(other = C221 + C201)
+
 mean(a$other)
 
-b = subset(Fatty_acids, Day == 46 & Forage == "Wheat") %>% mutate(other = C221 + C201)
+b <- 
+  subset(Fatty_acids, Day == 46 & Forage == "Wheat") %>% 
+  mutate(other = C221 + C201)
+
 mean(b$other)
 
-c = subset(Fatty_acids, Day == 0 & Forage == "Rye") %>% mutate(other = C221 + C201)
+c <- 
+  subset(Fatty_acids, Day == 0 & Forage == "Rye") %>% 
+  mutate(other = C221 + C201)
+
 mean(c$other)
 
-d = subset(Fatty_acids, Day == 46 & Forage == "Rye") %>% mutate(other = C221 + C201)
+d <- 
+  subset(Fatty_acids, Day == 46 & Forage == "Rye") %>% 
+  mutate(other = C221 + C201)
+
 mean(d$other)
 ```
 
 # C240 model
-```{r, include = F}
+```{r}
 #model
-C240 = lmer(C240 ~ Day*Forage + (1|Pen) + (1|Paddock/Forage), 
-            data = within(Fatty_acids, Forage <- relevel(Forage, ref = "Wheat")))
+C240 <- lmer(C240 ~ Day*Forage + (1|Pen) + (1|Paddock/Forage), 
+             data = within(Fatty_acids, Forage <- relevel(Forage, ref = "Wheat")))
 
 #diagnostics
 plot(C240, main = "Residuals vs fitted")
@@ -788,7 +846,7 @@ anova(C240, ddf = "Kenward-Roger")
 r.squaredGLMM(C240)
 
 # Predicted Y values from model that excludes random effects
-newDat.C240 = newDat
+newDat.C240 <- newDat
 newDat.C240$fit <- predict.fun(C240)
 
 # 95% confidence intervals based on 1000 bootstrap resamples
@@ -797,62 +855,67 @@ newDat.C240 <- cbind(newDat.C240, confint(boot.ci.C240, type = "perc"))
 ```
 
 # C240 plot
-```{r, echo = F}
+```{r}
 {
   ggplot(data = Fatty_acids, 
          aes(x = Day, y = C240, color = Forage)) + 
-  
-  geom_point(size = 3, 
-             show.legend = T,
-             position = position_jitter(h = 0.01, w = 0.01),
-             alpha = 0.5) + 
-  
-  scale_color_manual(breaks = c("Rye", "Wheat"), 
-                     values = c("darkred", "dodgerblue4")) + 
-  
-  geom_line(data = newDat.C240, 
-            aes(x = Day, y = fit, group = Forage), 
-            size = 2) +
-  
-  geom_ribbon(data = subset(newDat.C240, Forage == "Rye"), 
-              aes(x = Day, ymin =`2.5 %`, ymax = `97.5 %`),
-              fill = "darksalmon", 
-              alpha = 0.5, 
-              inherit.aes = FALSE) +
-  
-  geom_ribbon(data = subset(newDat.C240, Forage == "Wheat"), 
-              aes(x = Day, ymin = `2.5 %`, ymax = `97.5 %`),
-              fill = "lightskyblue1", alpha = 0.5, inherit.aes = FALSE) +
-  
-  theme_classic() +
-  
-  labs(x = "Day of grazing period", 
-       y = "Lignoceric acid, g 100g\u207B\u00B9 of total fatty acids", 
-       caption = "Scatter plot of original data with regression and bootstrap 95% confidence intervals (1000 resamples) of lignoceric acid (C24:0) \nconcentration for winter rye and winter wheat forages during the grazing period.") +
-  
-  scale_y_continuous(breaks = seq(0, 1.5, 0.25), 
-                     limits = c(-0.03, 1.5), expand = c(0,0)) +
-  
-  scale_x_continuous(breaks = seq(0, 46, 2), limits = c(-1, 47), expand = c(0, 0)) +
-  
- 
-  theme(axis.title = element_text(size = 20),
-        plot.caption = element_text(size = 18, hjust = 0),   
-        axis.text = element_text(size = 18, colour = "black"),
-        legend.position = c(.1, .9),
-        legend.title = element_blank(),
-        legend.direction = "vertical",
-        legend.text = element_text(size = 20),
-        axis.title.y = element_text(margin = margin(t = 0, r = 20, b = 0, l = 0)),
-        axis.title.x = element_text(margin = margin(t = 10, r = 0, b = 10, l = 0)))
+    
+    geom_point(size = 3, 
+               show.legend = T,
+               position = position_jitter(h = 0.01, w = 0.01),
+               alpha = 0.5) + 
+    
+    scale_color_manual(breaks = c("Rye", "Wheat"), 
+                       values = c("darkred", "dodgerblue4")) + 
+    
+    geom_line(data = newDat.C240, 
+              aes(x = Day, y = fit, group = Forage), 
+              size = 2) +
+    
+    geom_ribbon(data = subset(newDat.C240, Forage == "Rye"), 
+                aes(x = Day, ymin =`2.5 %`, ymax = `97.5 %`),
+                fill = "darksalmon", 
+                alpha = 0.5, 
+                inherit.aes = F) +
+    
+    geom_ribbon(data = subset(newDat.C240, Forage == "Wheat"), 
+                aes(x = Day, ymin = `2.5 %`, ymax = `97.5 %`),
+                fill = "lightskyblue1", 
+                alpha = 0.5, 
+                inherit.aes = F) +
+    
+    theme_classic() +
+    
+    labs(x = "Grazing interval, day", 
+         y = "Lignoceric acid, g 100g\u207B\u00B9 of total fatty acids", 
+         caption = "Scatter plot of data with regression (solid lines) and bootstrap 95% confidence intervals (transparent bands) based on \n1000 resamples for lignoceric acid (C24:0) concentrations of fatty acids in rye and wheat forages during the grazing interval \n(day0 = 25 Apr; day46 = 10 Jun 2016).") +
+    
+    scale_y_continuous(breaks = seq(0, 1.5, 0.25), 
+                       limits = c(-0.03, 1.5), 
+                       expand = c(0,0)) +
+    
+    scale_x_continuous(breaks = seq(0, 46, 2), 
+                       limits = c(-1, 47), 
+                       expand = c(0, 0)) +
+    
+    
+    theme(axis.title = element_text(size = 20),
+          plot.caption = element_text(size = 18, hjust = 0),   
+          axis.text = element_text(size = 18, colour = "black"),
+          legend.position = c(.1, .9),
+          legend.title = element_blank(),
+          legend.direction = "vertical",
+          legend.text = element_text(size = 20),
+          axis.title.y = element_text(margin = margin(t = 0, r = 20, b = 0, l = 0)),
+          axis.title.x = element_text(margin = margin(t = 10, r = 0, b = 10, l = 0)))
 }
 ```
 
 # n6:n3 ratio model
-```{r, include = F}
+```{r}
 #model
-ratio.2 = lmer(C182/C183 ~ poly(Day, 2)*Forage + (1|Pen) + (1|Paddock/Forage), 
-               data = within(Fatty_acids, Forage <- relevel(Forage, ref = "Rye")))
+ratio.2 <- lmer(C182/C183 ~ poly(Day, 2)*Forage + (1|Pen) + (1|Paddock/Forage), 
+                data = within(Fatty_acids, Forage <- relevel(Forage, ref = "Rye")))
 
 #diagnostics
 plot(ratio.2, main = "Residuals vs fitted")
@@ -869,9 +932,9 @@ r.squaredGLMM(ratio.2)
 ```
 
 # n6:n3 ratio plot
-```{r, echo = F}
+```{r}
 # Predicted Y values from model that excludes random effects
-newDat.ratio = newDat
+newDat.ratio <- newDat
 newDat.ratio$fit <- predict.fun(ratio.2)
 
 # 95% confidence intervals based on 1000 bootstrap resamples
@@ -911,48 +974,53 @@ quantile(data.frame(data.frame(boot.ci.ratio)$X94 - data.frame(boot.ci.ratio)$X4
 {
   ggplot(data = Fatty_acids, 
          aes(x = Day, y = C182/C183, color = Forage)) + 
-  
-  geom_point(size = 1.5, 
-             show.legend = T, 
-             position = position_jitter(h = 0.001, w = 0.001),
-             alpha = 0.5) + 
-  
-  scale_color_manual(breaks = c("Rye", "Wheat"), 
-                     values = c("darkred", "dodgerblue4")) + 
-  
-  geom_line(data = newDat.ratio, 
-            aes(x = Day, y = newDat.ratio$fit, group = Forage), 
-            size = 1) +
-  
-  geom_ribbon(data = subset(newDat.ratio, Forage == "Rye"), 
-              aes(x = Day, ymin = `2.5 %`, ymax = `97.5 %`),
-              fill = "darksalmon", 
-              alpha = 0.5, 
-              inherit.aes = FALSE) +
-  
-  geom_ribbon(data = subset(newDat.ratio, Forage == "Wheat"), 
-              aes(x = Day, ymin = `2.5 %`, ymax = `97.5 %`),
-              fill = "lightskyblue1", alpha = 0.5, inherit.aes = FALSE) +
-  
-  theme_classic() +
-  
-  labs(x = "Day of grazing period", 
-       y = "n-6:n-3 ratio") +
-  
-  scale_y_continuous(breaks = seq(.05, .25, .025), 
-                     limits = c(.05, .26), expand = c(0,0)) +
-  
-  scale_x_continuous(breaks = seq(0, 46, 2), limits = c(-1, 47), expand = c(0,0)) +
-  
-
-  theme(axis.title = element_text(size = 14),
-        plot.caption = element_text(size = 11, hjust = 0),   
-        axis.text = element_text(size = 11, colour = "black"),
-        legend.position = c(.1, .9),
-        legend.title = element_blank(),
-        legend.direction = "vertical",
-        legend.text = element_text(size = 11),
-        axis.title.y = element_text(margin = margin(t = 0, r = 20, b = 0, l = 0)),
-        axis.title.x = element_text(margin = margin(t = 10, r = 0, b = 10, l = 0)))
+    
+    geom_point(size = 1.5, 
+               show.legend = T, 
+               position = position_jitter(h = 0.001, w = 0.001),
+               alpha = 0.5) + 
+    
+    scale_color_manual(breaks = c("Rye", "Wheat"), 
+                       values = c("darkred", "dodgerblue4")) + 
+    
+    geom_line(data = newDat.ratio, 
+              aes(x = Day, y = fit, group = Forage), 
+              size = 1) +
+    
+    geom_ribbon(data = subset(newDat.ratio, Forage == "Rye"), 
+                aes(x = Day, ymin = `2.5 %`, ymax = `97.5 %`),
+                fill = "darksalmon", 
+                alpha = 0.5, 
+                inherit.aes = F) +
+    
+    geom_ribbon(data = subset(newDat.ratio, Forage == "Wheat"), 
+                aes(x = Day, ymin = `2.5 %`, ymax = `97.5 %`),
+                fill = "lightskyblue1", 
+                alpha = 0.5, 
+                inherit.aes = F) +
+    
+    theme_classic() +
+    
+    labs(x = "Grazing interval, day", 
+         y = "n-6:n-3 ratio") +
+    
+    scale_y_continuous(breaks = seq(.05, .25, .025), 
+                       limits = c(.05, .26), 
+                       expand = c(0,0)) +
+    
+    scale_x_continuous(breaks = seq(0, 46, 2), 
+                       limits = c(-1, 47), 
+                       expand = c(0,0)) +
+    
+    
+    theme(axis.title = element_text(size = 14),
+          plot.caption = element_text(size = 11, hjust = 0),   
+          axis.text = element_text(size = 11, colour = "black"),
+          legend.position = c(.1, .9),
+          legend.title = element_blank(),
+          legend.direction = "vertical",
+          legend.text = element_text(size = 11),
+          axis.title.y = element_text(margin = margin(t = 0, r = 20, b = 0, l = 0)),
+          axis.title.x = element_text(margin = margin(t = 10, r = 0, b = 10, l = 0)))
 }
 ```
