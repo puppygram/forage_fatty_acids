@@ -18,7 +18,7 @@ library(lmerTest) #KR ddf
 library(MuMIn) #r.squaredGLMM
 library(ggplot2) #plots
 library(merTools)
-library(afex) #CIs
+library(afex) #CIs 
 
 Fatty_acids <- 
   read_excel("C:/Users/Hannah/Desktop/Forage paper/Fatty acids/R_project/Fatty_acid_data.xlsx") %>% 
