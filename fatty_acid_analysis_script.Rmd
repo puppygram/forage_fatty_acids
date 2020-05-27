@@ -19,12 +19,32 @@ library(MuMIn) #r.squaredGLMM
 library(ggplot2) #plots
 library(merTools)
 library(afex) #CIs 
+library(DHARMa)
+library(glmmTMB)
+library(dbplyr)
 
-Fatty_acids <- 
+#Make y coordinates with (0, 0) on the bottom left of pasture
+y.cor.list <- as.data.frame(seq(from = 14.45238, to = 607 , by = 28.90476)) %>%
+  rename("y.cor" = "seq(from = 14.45238, to = 607, by = 28.90476)") %>%
+  mutate(Paddock = c(7,7,7,6,6,6,5,5,5,4,4,4,3,3,3,2,2,2,1,1,1)) %>%
+  mutate(Paddock = as.factor(Paddock)) %>%
+  mutate(pen.row = rep(c(3,2,1), 7))
+
+dat <- 
   read_excel("C:/Users/Hannah/Desktop/Forage paper/Fatty acids/R_project/Fatty_acid_data.xlsx") %>% 
-  mutate_at(vars(Forage, Paddock, Pen), as.factor)
+  mutate_at(vars(Forage, Paddock, Pen), as.factor) %>%
+  mutate(x.cor = ifelse(Forage == "Wheat", 33, 99)) %>% #add x coordinates
+  mutate(pen.row = ifelse(Pen == "1" | Pen == "2", 1, ifelse(Pen == "3" | Pen == "5", 2, ifelse(Pen == "4" | Pen  == "6", 3, NA))))
 
-Fatty_acids[,6:16] <- Fatty_acids[,6:16]*100
+
+dat <- 
+  as.data.frame(left_join(dat, y.cor.list)) %>%
+  mutate(x.y.cor = as.factor(paste(x.cor, y.cor, sep = ","))) %>%
+  mutate(pen_paddock = as.factor(paste(Pen, Paddock, sep = "_"))) %>%
+  mutate(paddock_forage = as.factor(paste(Paddock, Forage, sep = "_")))
+
+
+dat[,6:16] <- dat[,6:16]*100
 ```
 
 # Create dataset to use for bootstrap predictions & function
@@ -45,24 +65,30 @@ predict.fun <-
   }
 ```
 
+
 # C140 model
 ```{r}
 #model
-C140 <- lmer(C140 ~ Day*Forage + (1|Pen) + (1|Paddock/Forage), 
-             data = within(Fatty_acids, Forage <- relevel(Forage, ref = "Wheat")))
+C140 <- lmer(C140 ~ Day*Forage + (1|Pen/Paddock) + (1|Paddock/Forage), 
+             data = within(dat, Forage <- relevel(Forage, ref = "Rye")))
 
 #diagnostics
 plot(C140, main = "Residuals vs fitted")
 qqnorm(resid(C140))
 qqline(resid(C140))
 
+# check spatial correlation between the 42 pens
+simulationOutput <- simulateResiduals(C140)
+simulationOutputRecalc <- recalculateResiduals(simulationOutput, group = dat$pen_paddock)
+testSpatialAutocorrelation(simulationOutputRecalc, 
+                           x =  aggregate(dat$x.cor, list(dat$pen_paddock), mean)$x, 
+                           y = aggregate(dat$y.cor, list(dat$pen_paddock), mean)$x, 
+                           plot = F)
+
 #regression coefficients 
 summary(C140, ddf = "Kenward-Roger")
 round(confint(C140), 3)
 anova(C140, ddf = "Kenward-Roger")
-
-#random effects
-as.data.frame(VarCorr(C140))
 
 #R squared
 r.squaredGLMM(C140)
@@ -79,7 +105,7 @@ boot.ci.C140 <- bootMer(C140, predict.fun, nsim = 1000, seed = 1)
 newDat.C140 <- cbind(newDat.C140, confint(boot.ci.C140, type = "perc"))
 
 {
-  ggplot(data = Fatty_acids, 
+  ggplot(data = dat, 
          aes(x = Day, y = C140, color = Forage)) + 
     
     geom_point(size = 3, 
@@ -135,13 +161,21 @@ newDat.C140 <- cbind(newDat.C140, confint(boot.ci.C140, type = "perc"))
 # C160 model
 ```{r}
 #model
-C160 <- lmer(C160 ~ Day*Forage + (1|Pen) + (1|Paddock/Forage), 
-             data = within(Fatty_acids, Forage <- relevel(Forage, ref = "Rye")))
+C160 <- lmer(C160 ~ Day*Forage + (1|Pen/Paddock) + (1|Paddock/Forage), 
+             data = within(dat, Forage <- relevel(Forage, ref = "Wheat")))
 
 #diagnostics
 plot(C160, main = "Residuals vs fitted")
 qqnorm(resid(C160))
 qqline(resid(C160))
+
+# check spatial correlation between the 42 pens
+simulationOutput <- simulateResiduals(C160)
+simulationOutputRecalc <- recalculateResiduals(simulationOutput, group = dat$pen_paddock)
+testSpatialAutocorrelation(simulationOutputRecalc, 
+                           x =  aggregate(dat$x.cor, list(dat$pen_paddock), mean)$x, 
+                           y = aggregate(dat$y.cor, list(dat$pen_paddock), mean)$x,
+                           plot = F)
 
 #regression coefficients 
 summary(C160, ddf = "Kenward-Roger")
@@ -193,7 +227,7 @@ quantile(data.frame(data.frame(boot.ci.C160)$X94 - data.frame(boot.ci.C160)$X47)
 quantile(data.frame(data.frame(boot.ci.C160)$X94 - data.frame(boot.ci.C160)$X47)[,1], 0.975)
 
 {
-  ggplot(data = Fatty_acids, 
+  ggplot(data = dat, 
          aes(x = Day, y = C160, color = Forage)) + 
     
     geom_point(size = 1.5, 
@@ -247,13 +281,21 @@ quantile(data.frame(data.frame(boot.ci.C160)$X94 - data.frame(boot.ci.C160)$X47)
 # C180 model
 ```{r}
 #model
-C180 <- lmer(C180 ~ Day*Forage + (1|Pen) + (1|Paddock/Forage), 
-             data = within(Fatty_acids, Forage <- relevel(Forage, ref = "Wheat")))
+C180 <- lmer(C180 ~ Day*Forage + (1|Pen/Paddock) + (1|Paddock/Forage), 
+             data = within(dat, Forage <- relevel(Forage, ref = "Wheat")))
 
 #diagnostics
 plot(C180, main = "Residuals vs fitted")
 qqnorm(resid(C180))
 qqline(resid(C180))
+
+# check spatial correlation between the 42 pens
+simulationOutput <- simulateResiduals(C180)
+simulationOutputRecalc <- recalculateResiduals(simulationOutput, group = dat$pen_paddock)
+testSpatialAutocorrelation(simulationOutputRecalc, 
+                           x =  aggregate(dat$x.cor, list(dat$pen_paddock), mean)$x, 
+                           y = aggregate(dat$y.cor, list(dat$pen_paddock), mean)$x,
+                           plot = F)
 
 #regression coefficients
 summary(C180, ddf = "Kenward-Roger")
@@ -275,7 +317,7 @@ newDat.C180 <- cbind(newDat.C180, confint(boot.ci.C180, type = "perc"))
 # C180 plot
 ```{r}
 {
-  ggplot(data = Fatty_acids, 
+  ggplot(data = dat, 
          aes(x = Day, y = C180, color = Forage)) + 
     
     geom_point(size = 3, 
@@ -332,13 +374,20 @@ newDat.C180 <- cbind(newDat.C180, confint(boot.ci.C180, type = "perc"))
 # C181 model
 ```{r}
 #model
-C181.2 <- lmer(C181 ~ poly(Day, 2)*Forage + (1|Pen) + (1|Paddock/Forage), 
-               data = within(Fatty_acids, Forage <- relevel(Forage, ref = "Wheat")))
+C181.2 <- lmer(C181 ~ poly(Day, 2)*Forage + (1|Pen/Paddock) + (1|Paddock/Forage), 
+               data = within(dat, Forage <- relevel(Forage, ref = "Wheat")))
 
 #diagnostics
 plot(C181.2, main = "Residuals vs fitted")
 qqnorm(resid(C181.2))
 qqline(resid(C181.2))
+
+# check spatial correlation between the 42 pens
+simulationOutput <- simulateResiduals(C181.2)
+simulationOutputRecalc <- recalculateResiduals(simulationOutput, group = dat$pen_paddock)
+testSpatialAutocorrelation(simulationOutputRecalc, 
+                           x =  aggregate(dat$x.cor, list(dat$pen_paddock), mean)$x, 
+                           y = aggregate(dat$y.cor, list(dat$pen_paddock), mean)$x)
 
 #regression coefficients
 summary(C181.2, ddf = "Kenward-Roger")
@@ -361,7 +410,7 @@ newDat.C181 <- cbind(newDat.C181, confint(boot.ci.C181, type = "perc"))
 
 
 {
-  ggplot(data = Fatty_acids, 
+  ggplot(data = dat, 
          aes(x = Day, y = C181, color = Forage)) + 
     
     geom_point(size = 3, 
@@ -419,13 +468,20 @@ newDat.C181 <- cbind(newDat.C181, confint(boot.ci.C181, type = "perc"))
 # C182 model
 ```{r}
 #model
-C182.2 <- lmer(C182 ~ poly(Day, 2)*Forage + (1|Pen) + (1|Paddock/Forage), 
-               data = within(Fatty_acids, Forage <- relevel(Forage, ref = "Rye")))
+C182.2 <- lmer(C182 ~ poly(Day, 2)*Forage + (1|Pen/Paddock) + (1|Paddock/Forage), 
+               data = within(dat, Forage <- relevel(Forage, ref = "Wheat")))
 
 #diagnostics
 plot(C182.2, main = "Residuals vs fitted")
 qqnorm(resid(C182.2))
 qqline(resid(C182.2))
+
+# check spatial correlation between the 42 pens
+simulationOutput <- simulateResiduals(C182.2)
+simulationOutputRecalc <- recalculateResiduals(simulationOutput, group = dat$pen_paddock)
+testSpatialAutocorrelation(simulationOutputRecalc, 
+                           x =  aggregate(dat$x.cor, list(dat$pen_paddock), mean)$x, 
+                           y = aggregate(dat$y.cor, list(dat$pen_paddock), mean)$x)
 
 #regression coefficients
 summary(C182.2, ddf = "Kenward-Roger")
@@ -472,7 +528,7 @@ quantile(data.frame(data.frame(boot.ci.C182)$X94 - data.frame(boot.ci.C182)$X47)
 quantile(data.frame(data.frame(boot.ci.C182)$X94 - data.frame(boot.ci.C182)$X47)[,1], 0.975)
 
 {
-  ggplot(data = Fatty_acids, 
+  ggplot(data = dat, 
          aes(x = Day, y = C182, color = Forage)) + 
     
     geom_point(size = 1.5, 
@@ -528,13 +584,21 @@ quantile(data.frame(data.frame(boot.ci.C182)$X94 - data.frame(boot.ci.C182)$X47)
 # C183 model
 ```{r}
 #model
-C183 <- lmer(C183 ~ Day*Forage + (1|Pen) + (1|Paddock/Forage), 
-             data = within(Fatty_acids, Forage <- relevel(Forage, ref = "Wheat")))
+C183 <- lmer(C183 ~ Day*Forage + (1|Pen/Paddock) + (1|Paddock/Forage), 
+             data = within(dat, Forage <- relevel(Forage, ref = "Rye")))
 
 #diagnostics
 plot(C183, main = "Residuals vs fitted")
 qqnorm(resid(C183))
 qqline(resid(C183))
+
+# check spatial correlation between the 42 pens
+simulationOutput <- simulateResiduals(C183)
+simulationOutputRecalc <- recalculateResiduals(simulationOutput, group = dat$pen_paddock)
+testSpatialAutocorrelation(simulationOutputRecalc, 
+                           x =  aggregate(dat$x.cor, list(dat$pen_paddock), mean)$x, 
+                           y = aggregate(dat$y.cor, list(dat$pen_paddock), mean)$x,
+                           plot = F)
 
 #regression coefficients
 summary(C183, ddf = "Kenward-Roger")
@@ -560,15 +624,15 @@ mean(data.frame(data.frame(boot.ci.C183)$X48 - data.frame(boot.ci.C183)$X1)[,1])
 quantile(data.frame(data.frame(boot.ci.C183)$X48 - data.frame(boot.ci.C183)$X1)[,1], 0.025)
 quantile(data.frame(data.frame(boot.ci.C183)$X48 - data.frame(boot.ci.C183)$X1)[,1], 0.975)
 
+#Difference between wheat - rye on d26
+mean(data.frame(data.frame(boot.ci.C183)$X74 - data.frame(boot.ci.C183)$X27)[,1])
+quantile(data.frame(data.frame(boot.ci.C183)$X74 - data.frame(boot.ci.C183)$X27)[,1], 0.025)
+quantile(data.frame(data.frame(boot.ci.C183)$X74 - data.frame(boot.ci.C183)$X27)[,1], 0.975)
+
 #Difference between wheat - rye on d27
 mean(data.frame(data.frame(boot.ci.C183)$X75 - data.frame(boot.ci.C183)$X28)[,1])
 quantile(data.frame(data.frame(boot.ci.C183)$X75 - data.frame(boot.ci.C183)$X28)[,1], 0.025)
 quantile(data.frame(data.frame(boot.ci.C183)$X75 - data.frame(boot.ci.C183)$X28)[,1], 0.975)
-
-#Difference between wheat - rye on d28
-mean(data.frame(data.frame(boot.ci.C183)$X76 - data.frame(boot.ci.C183)$X29)[,1])
-quantile(data.frame(data.frame(boot.ci.C183)$X76 - data.frame(boot.ci.C183)$X29)[,1], 0.025)
-quantile(data.frame(data.frame(boot.ci.C183)$X76 - data.frame(boot.ci.C183)$X29)[,1], 0.975)
 
 #Difference between wheat - rye on d46
 mean(data.frame(data.frame(boot.ci.C183)$X94 - data.frame(boot.ci.C183)$X47)[,1])
@@ -576,7 +640,7 @@ quantile(data.frame(data.frame(boot.ci.C183)$X94 - data.frame(boot.ci.C183)$X47)
 quantile(data.frame(data.frame(boot.ci.C183)$X94 - data.frame(boot.ci.C183)$X47)[,1], 0.975)
 
 {
-  ggplot(data = Fatty_acids, 
+  ggplot(data = dat, 
          aes(x = Day, y = C183, color = Forage)) + 
     
     geom_point(size = 1.5, 
@@ -632,13 +696,21 @@ quantile(data.frame(data.frame(boot.ci.C183)$X94 - data.frame(boot.ci.C183)$X47)
 # C200 model
 ```{r}
 #model
-C200.2 <- lmer(C200 ~ poly(Day, 2)*Forage + (1|Pen) + (1|Paddock/Forage), 
-               data = within(Fatty_acids, Forage <- relevel(Forage, ref = "Wheat")))
+C200.2 <- lmer(C200 ~ poly(Day, 2)*Forage + (1|Pen/Paddock) + (1|Paddock/Forage), 
+               data = within(dat, Forage <- relevel(Forage, ref = "Wheat")))
 
 #diagnostics
 plot(C200.2, main = "Residuals vs fitted")
 qqnorm(resid(C200.2))
 qqline(resid(C200.2))
+
+# check spatial correlation between the 42 pens
+simulationOutput <- simulateResiduals(C200.2)
+simulationOutputRecalc <- recalculateResiduals(simulationOutput, group = dat$pen_paddock)
+testSpatialAutocorrelation(simulationOutputRecalc, 
+                           x =  aggregate(dat$x.cor, list(dat$pen_paddock), mean)$x, 
+                           y = aggregate(dat$y.cor, list(dat$pen_paddock), mean)$x, 
+                           plot = F)
 
 #regression coefficients
 summary(C200.2, ddf = "Kenward-Roger")
@@ -660,7 +732,7 @@ boot.ci.C200 <- bootMer(C200.2, predict.fun, nsim = 1000, seed = 1)
 newDat.C200 <- cbind(newDat.C200, confint(boot.ci.C200, type = "perc"))
 
 {
-  ggplot(data = Fatty_acids, 
+  ggplot(data = dat, 
          aes(x = Day, y = C200, color = Forage)) + 
     
     geom_point(size = 3, 
@@ -717,13 +789,21 @@ newDat.C200 <- cbind(newDat.C200, confint(boot.ci.C200, type = "perc"))
 # C220 model
 ```{r}
 #model
-C220 <- lmer(C220 ~ Day*Forage + (1|Pen) + (1|Paddock/Forage), 
-             data = within(Fatty_acids, Forage <- relevel(Forage, ref = "Wheat")))
+C220 <- lmer(C220 ~ Day*Forage + (1|Pen/Paddock) + (1|Paddock/Forage), 
+             data = within(dat, Forage <- relevel(Forage, ref = "Wheat")))
 
 #diagnostics
 plot(C220, main = "Residuals vs fitted")
 qqnorm(resid(C220))
 qqline(resid(C220))
+
+# check spatial correlation between the 42 pens
+simulationOutput <- simulateResiduals(C220)
+simulationOutputRecalc <- recalculateResiduals(simulationOutput, group = dat$pen_paddock)
+testSpatialAutocorrelation(simulationOutputRecalc, 
+                           x =  aggregate(dat$x.cor, list(dat$pen_paddock), mean)$x, 
+                           y = aggregate(dat$y.cor, list(dat$pen_paddock), mean)$x,
+                           plot = F)
 
 #regression coefficients
 summary(C220, ddf = "Kenward-Roger")
@@ -745,7 +825,7 @@ newDat.C220 <- cbind(newDat.C220, confint(boot.ci.C200, type = "perc"))
 # C220 plot
 ```{r}
 {
-  ggplot(data = Fatty_acids, 
+  ggplot(data = dat, 
          aes(x = Day, y = C220, color = Forage)) + 
     
     geom_point(size = 3, 
@@ -829,13 +909,21 @@ mean(d$other)
 # C240 model
 ```{r}
 #model
-C240 <- lmer(C240 ~ Day*Forage + (1|Pen) + (1|Paddock/Forage), 
-             data = within(Fatty_acids, Forage <- relevel(Forage, ref = "Wheat")))
+C240 <- lmer(C240 ~ Day*Forage + (1|Pen/Paddock) + (1|Paddock/Forage), 
+             data = within(dat, Forage <- relevel(Forage, ref = "Wheat")))
 
 #diagnostics
 plot(C240, main = "Residuals vs fitted")
 qqnorm(resid(C240))
 qqline(resid(C240))
+
+# check spatial correlation between the 42 pens
+simulationOutput <- simulateResiduals(C240)
+simulationOutputRecalc <- recalculateResiduals(simulationOutput, group = dat$pen_paddock)
+testSpatialAutocorrelation(simulationOutputRecalc, 
+                           x =  aggregate(dat$x.cor, list(dat$pen_paddock), mean)$x, 
+                           y = aggregate(dat$y.cor, list(dat$pen_paddock), mean)$x,
+                           plot = F)
 
 #regression coefficients
 summary(C240, ddf = "Kenward-Roger")
@@ -857,7 +945,7 @@ newDat.C240 <- cbind(newDat.C240, confint(boot.ci.C240, type = "perc"))
 # C240 plot
 ```{r}
 {
-  ggplot(data = Fatty_acids, 
+  ggplot(data = dat, 
          aes(x = Day, y = C240, color = Forage)) + 
     
     geom_point(size = 3, 
@@ -914,13 +1002,21 @@ newDat.C240 <- cbind(newDat.C240, confint(boot.ci.C240, type = "perc"))
 # n6:n3 ratio model
 ```{r}
 #model
-ratio.2 <- lmer(C182/C183 ~ poly(Day, 2)*Forage + (1|Pen) + (1|Paddock/Forage), 
-                data = within(Fatty_acids, Forage <- relevel(Forage, ref = "Rye")))
+ratio.2 <- lmer(C182/C183 ~ poly(Day, 2)*Forage + (1|Pen/Paddock) + (1|Paddock/Forage), 
+                data = within(dat, Forage <- relevel(Forage, ref = "Wheat")))
 
 #diagnostics
 plot(ratio.2, main = "Residuals vs fitted")
 qqnorm(resid(ratio.2))
 qqline(resid(ratio.2))
+
+# check spatial correlation between the 42 pens
+simulationOutput <- simulateResiduals(ratio.2)
+simulationOutputRecalc <- recalculateResiduals(simulationOutput, group = dat$pen_paddock)
+testSpatialAutocorrelation(simulationOutputRecalc, 
+                           x =  aggregate(dat$x.cor, list(dat$pen_paddock), mean)$x, 
+                           y = aggregate(dat$y.cor, list(dat$pen_paddock), mean)$x,
+                           plot = F)
 
 #regression coefficients
 summary(ratio.2, ddf = "Kenward-Roger")
@@ -972,7 +1068,7 @@ quantile(data.frame(data.frame(boot.ci.ratio)$X94 - data.frame(boot.ci.ratio)$X4
 quantile(data.frame(data.frame(boot.ci.ratio)$X94 - data.frame(boot.ci.ratio)$X47)[,1], 0.975)
 
 {
-  ggplot(data = Fatty_acids, 
+  ggplot(data = dat, 
          aes(x = Day, y = C182/C183, color = Forage)) + 
     
     geom_point(size = 1.5, 
