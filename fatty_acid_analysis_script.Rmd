@@ -22,7 +22,10 @@ library(afex) #CIs
 library(DHARMa)
 library(glmmTMB)
 library(dbplyr)
+library(lattice) #qqmath
+```
 
+```{r}
 #Make y coordinates with (0, 0) on the bottom left of pasture
 y.cor.list <- as.data.frame(seq(from = 14.45238, to = 607 , by = 28.90476)) %>%
   rename("y.cor" = "seq(from = 14.45238, to = 607, by = 28.90476)") %>%
@@ -73,9 +76,8 @@ C140 <- lmer(C140 ~ Day*Forage + (1|Pen/Paddock) + (1|Paddock/Forage),
              data = within(dat, Forage <- relevel(Forage, ref = "Rye")))
 
 #diagnostics
-plot(C140, main = "Residuals vs fitted")
-qqnorm(resid(C140))
-qqline(resid(C140))
+plot(C140, sqrt(abs(residuals(.))) ~ fitted(.), type = c("p","smooth"))
+qqmath(C140)
 
 # check spatial correlation between the 42 pens
 simulationOutput <- simulateResiduals(C140)
@@ -165,9 +167,8 @@ C160 <- lmer(C160 ~ Day*Forage + (1|Pen/Paddock) + (1|Paddock/Forage),
              data = within(dat, Forage <- relevel(Forage, ref = "Wheat")))
 
 #diagnostics
-plot(C160, main = "Residuals vs fitted")
-qqnorm(resid(C160))
-qqline(resid(C160))
+plot(C160, sqrt(abs(residuals(.))) ~ fitted(.), type = c("p","smooth"))
+qqmath(C160)
 
 # check spatial correlation between the 42 pens
 simulationOutput <- simulateResiduals(C160)
@@ -285,9 +286,8 @@ C180 <- lmer(C180 ~ Day*Forage + (1|Pen/Paddock) + (1|Paddock/Forage),
              data = within(dat, Forage <- relevel(Forage, ref = "Wheat")))
 
 #diagnostics
-plot(C180, main = "Residuals vs fitted")
-qqnorm(resid(C180))
-qqline(resid(C180))
+plot(C180, sqrt(abs(residuals(.))) ~ fitted(.), type = c("p","smooth"))
+qqmath(C180)
 
 # check spatial correlation between the 42 pens
 simulationOutput <- simulateResiduals(C180)
@@ -378,9 +378,8 @@ C181.2 <- lmer(C181 ~ poly(Day, 2)*Forage + (1|Pen/Paddock) + (1|Paddock/Forage)
                data = within(dat, Forage <- relevel(Forage, ref = "Wheat")))
 
 #diagnostics
-plot(C181.2, main = "Residuals vs fitted")
-qqnorm(resid(C181.2))
-qqline(resid(C181.2))
+plot(C181.2, sqrt(abs(residuals(.))) ~ fitted(.), type = c("p","smooth"))
+qqmath(C181.2)
 
 # check spatial correlation between the 42 pens
 simulationOutput <- simulateResiduals(C181.2)
@@ -472,9 +471,8 @@ C182.2 <- lmer(C182 ~ poly(Day, 2)*Forage + (1|Pen/Paddock) + (1|Paddock/Forage)
                data = within(dat, Forage <- relevel(Forage, ref = "Wheat")))
 
 #diagnostics
-plot(C182.2, main = "Residuals vs fitted")
-qqnorm(resid(C182.2))
-qqline(resid(C182.2))
+plot(C182.2, sqrt(abs(residuals(.))) ~ fitted(.), type = c("p","smooth"))
+qqmath(C182.2)
 
 # check spatial correlation between the 42 pens
 simulationOutput <- simulateResiduals(C182.2)
@@ -588,9 +586,8 @@ C183 <- lmer(C183 ~ Day*Forage + (1|Pen/Paddock) + (1|Paddock/Forage),
              data = within(dat, Forage <- relevel(Forage, ref = "Rye")))
 
 #diagnostics
-plot(C183, main = "Residuals vs fitted")
-qqnorm(resid(C183))
-qqline(resid(C183))
+plot(C183, sqrt(abs(residuals(.))) ~ fitted(.), type = c("p","smooth"))
+qqmath(C183)
 
 # check spatial correlation between the 42 pens
 simulationOutput <- simulateResiduals(C183)
@@ -700,9 +697,8 @@ C200.2 <- lmer(C200 ~ poly(Day, 2)*Forage + (1|Pen/Paddock) + (1|Paddock/Forage)
                data = within(dat, Forage <- relevel(Forage, ref = "Wheat")))
 
 #diagnostics
-plot(C200.2, main = "Residuals vs fitted")
-qqnorm(resid(C200.2))
-qqline(resid(C200.2))
+plot(C200.2, sqrt(abs(residuals(.))) ~ fitted(.), type = c("p","smooth"))
+qqmath(C200.2)
 
 # check spatial correlation between the 42 pens
 simulationOutput <- simulateResiduals(C200.2)
@@ -793,9 +789,8 @@ C220 <- lmer(C220 ~ Day*Forage + (1|Pen/Paddock) + (1|Paddock/Forage),
              data = within(dat, Forage <- relevel(Forage, ref = "Wheat")))
 
 #diagnostics
-plot(C220, main = "Residuals vs fitted")
-qqnorm(resid(C220))
-qqline(resid(C220))
+plot(C220, sqrt(abs(residuals(.))) ~ fitted(.), type = c("p","smooth"))
+qqmath(C220)
 
 # check spatial correlation between the 42 pens
 simulationOutput <- simulateResiduals(C220)
@@ -913,9 +908,8 @@ C240 <- lmer(C240 ~ Day*Forage + (1|Pen/Paddock) + (1|Paddock/Forage),
              data = within(dat, Forage <- relevel(Forage, ref = "Wheat")))
 
 #diagnostics
-plot(C240, main = "Residuals vs fitted")
-qqnorm(resid(C240))
-qqline(resid(C240))
+plot(C240, sqrt(abs(residuals(.))) ~ fitted(.), type = c("p","smooth"))
+qqmath(C240)
 
 # check spatial correlation between the 42 pens
 simulationOutput <- simulateResiduals(C240)
@@ -1006,9 +1000,8 @@ ratio.2 <- lmer(C182/C183 ~ poly(Day, 2)*Forage + (1|Pen/Paddock) + (1|Paddock/F
                 data = within(dat, Forage <- relevel(Forage, ref = "Wheat")))
 
 #diagnostics
-plot(ratio.2, main = "Residuals vs fitted")
-qqnorm(resid(ratio.2))
-qqline(resid(ratio.2))
+plot(ratio.2, sqrt(abs(residuals(.))) ~ fitted(.), type = c("p","smooth"))
+qqmath(ratio.2)
 
 # check spatial correlation between the 42 pens
 simulationOutput <- simulateResiduals(ratio.2)
