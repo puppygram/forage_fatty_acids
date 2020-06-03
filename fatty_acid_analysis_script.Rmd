@@ -26,28 +26,30 @@ library(lattice) #qqmath
 ```
 
 ```{r}
-#Make y coordinates with (0, 0) on the bottom left of pasture
-y.cor.list <- as.data.frame(seq(from = 14.45238, to = 607 , by = 28.90476)) %>%
+#Make y coordinates with 0 being the bottom left of pasture
+y.cor.list <- 
+  as.data.frame(seq(from = 14.45238, to = 607 , by = 28.90476)) %>%
   rename("y.cor" = "seq(from = 14.45238, to = 607, by = 28.90476)") %>%
   mutate(Paddock = c(7,7,7,6,6,6,5,5,5,4,4,4,3,3,3,2,2,2,1,1,1)) %>%
   mutate(Paddock = as.factor(Paddock)) %>%
   mutate(pen.row = rep(c(3,2,1), 7))
 
+#read in data
 dat <- 
   read_excel("C:/Users/Hannah/Desktop/Forage paper/Fatty acids/R_project/Fatty_acid_data.xlsx") %>% 
   mutate_at(vars(Forage, Paddock, Pen), as.factor) %>%
   mutate(x.cor = ifelse(Forage == "Wheat", 33, 99)) %>% #add x coordinates
   mutate(pen.row = ifelse(Pen == "1" | Pen == "2", 1, ifelse(Pen == "3" | Pen == "5", 2, ifelse(Pen == "4" | Pen  == "6", 3, NA))))
 
-
+#merge with y coordinates
 dat <- 
   as.data.frame(left_join(dat, y.cor.list)) %>%
   mutate(x.y.cor = as.factor(paste(x.cor, y.cor, sep = ","))) %>%
   mutate(pen_paddock = as.factor(paste(Pen, Paddock, sep = "_"))) %>%
   mutate(paddock_forage = as.factor(paste(Paddock, Forage, sep = "_")))
 
-
-dat[,6:16] <- dat[,6:16]*100
+#make outcome variables on % scale
+dat[,6:16] <- dat[,6:16]*100 #
 ```
 
 # Create dataset to use for bootstrap predictions & function
