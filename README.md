@@ -1,5 +1,5 @@
 # forage_fatty_acids
-linear mixed models (lmer); spatial autocorrelation tests; bootstrapped estimates; graphical results (ggplot2) [complete]
+linear mixed models (lmer); spatial autocorrelation tests; bootstrapped estimates; graphical results (ggplot2)
 
 Published article: Fatty Acid Composition Dynamics of Rye (Secale cereale L.) and Wheat (Triticum aestivum L.) Forages under Cattle Grazing (Agronomy 2020, 10, 813; doi:10.3390/agronomy10060813)
 
